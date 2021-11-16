@@ -25,7 +25,7 @@ pub fn find(config: &Config, result: &mut Vec<MarkupFile>) {
     {
         let f_name = entry.file_name().to_string_lossy();
 
-        if let Some(markup_type) = markup_type(&f_name, &markup_types) {
+        if let Some(markup_type) = markup_type(&f_name, markup_types) {
             let path = entry.path();
             let abs_path = fs::canonicalize(path).expect("Expected path to exist.");
             let ignore = match &config.optional.ignore_path {
