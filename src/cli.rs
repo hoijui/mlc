@@ -166,7 +166,7 @@ pub fn parse_args() -> Config {
         )
         .to_path_buf();
         if !root_path.is_dir() {
-            eprintln!("Root path {:?} must be a directory!", root_path);
+            eprintln!("Root path '{:?}' must be a directory!", root_path);
             std::process::exit(1);
         }
         opt.root_dir = Some(root_path)
