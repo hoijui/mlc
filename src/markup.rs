@@ -52,7 +52,6 @@ mod tests {
 
     #[test]
     fn all_lowercase_file_extensions() {
-
         for mt in [MarkupType::Markdown, MarkupType::Html] {
             for ext in mt.file_extensions() {
                 assert_eq!(ext, ext.to_lowercase());
