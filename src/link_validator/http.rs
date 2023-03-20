@@ -31,7 +31,8 @@ async fn http_request(url: &reqwest::Url) -> reqwest::Result<LinkCheckResult> {
             .brotli(true)
             .gzip(true)
             .deflate(true)
-            .build().expect("Bug! failed to build client");        
+            .build()
+            .expect("Bug! failed to build client");
     }
 
     fn status_to_string(status: StatusCode) -> String {
@@ -58,7 +59,9 @@ async fn http_request(url: &reqwest::Url) -> reqwest::Result<LinkCheckResult> {
         if response.url() == url {
             Ok(LinkCheckResult::Ok)
         } else {
-            Ok(LinkCheckResult::Warning("Request was redirected to ".to_string() + response.url().as_ref()))
+            Ok(LinkCheckResult::Warning(
+                "Request was redirected to ".to_string() + response.url().as_ref(),
+            ))
         }
     } else if status.is_redirection() {
         // Only if > 10 redirects
@@ -93,13 +96,21 @@ mod test {
     #[tokio::test]
     async fn check_http_is_redirection() {
         let result = check_http("http://gitlab.com/becheran/mlc").await;
-        assert_eq!(result, LinkCheckResult::Warning("Request was redirected to https://gitlab.com/becheran/mlc".to_string()));
+        assert_eq!(
+            result,
+            LinkCheckResult::Warning(
+                "Request was redirected to https://gitlab.com/becheran/mlc".to_string()
+            )
+        );
     }
 
     #[tokio::test]
     async fn check_http_is_redirection_failure() {
         let result = check_http("http://github.com/fake-page").await;
-        assert_eq!(result, LinkCheckResult::Failed("404 - Not Found".to_string()));
+        assert_eq!(
+            result,
+            LinkCheckResult::Failed("404 - Not Found".to_string())
+        );
     }
 
     #[tokio::test]
@@ -117,7 +128,12 @@ mod test {
     #[tokio::test]
     async fn check_http_request_redirection_with_hash() {
         let result = check_http("http://gitlab.com/becheran/mlc#bla").await;
-        assert_eq!(result, LinkCheckResult::Warning("Request was redirected to https://gitlab.com/becheran/mlc".to_string()));
+        assert_eq!(
+            result,
+            LinkCheckResult::Warning(
+                "Request was redirected to https://gitlab.com/becheran/mlc".to_string()
+            )
+        );
     }
 
     #[tokio::test]
