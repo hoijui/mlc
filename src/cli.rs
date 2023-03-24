@@ -35,6 +35,7 @@ pub fn parse_args() -> Config {
                 .long("debug")
                 .short('d')
                 .help("Print debug information to console")
+                .action(ArgAction::SetTrue)
                 .required(false),
         )
         .arg(
@@ -42,6 +43,7 @@ pub fn parse_args() -> Config {
                 .long("offline")
                 .short('o')
                 .help("Do not check web links")
+                .action(ArgAction::SetTrue)
                 .required(false),
         )
         .arg(
