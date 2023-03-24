@@ -56,6 +56,17 @@ impl LinkCheckResult {
     pub const fn is_err(&self) -> bool {
         matches!(self, Self::Failed(_))
     }
+
+    #[must_use]
+    pub const fn has_issue(&self) -> bool {
+        match self {
+            LinkCheckResult::Ok => false,
+            LinkCheckResult::Failed(_) => true,
+            LinkCheckResult::Warning(_) => true,
+            LinkCheckResult::Ignored(_) => false,
+            LinkCheckResult::NotImplemented(_) => true,
+        }
+    }
 }
 
 pub async fn resolve_target_link(

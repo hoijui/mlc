@@ -171,7 +171,7 @@ fn print_helper(
 fn print_result(result: &FinalResult, map: &HashMap<Target, Vec<MarkupLink>>) {
     for link in &map[&result.target] {
         let code = &result.result_code;
-        print_helper(link, code.status_code(), code.msg(), code.is_err());
+        print_helper(link, code.status_code(), code.msg(), code.has_issue());
     }
 }
 
