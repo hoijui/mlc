@@ -21,7 +21,7 @@ pub fn init(log_level: &LogLevel) {
     let err = CombinedLogger::init(vec![TermLogger::new(
         level_filter,
         Config::default(),
-        TerminalMode::Mixed,
+        TerminalMode::Stderr,
         ColorChoice::Auto,
     )]);
     assert!(err.is_ok(), "Failed to init logger! Error: {:?}", err);
