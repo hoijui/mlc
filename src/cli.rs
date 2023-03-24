@@ -68,7 +68,7 @@ pub fn parse_args() -> Config {
                 .short('i')
                 .help("List of links which will not be checked")
                 .long_help("One or more wildcard-patterns/globs, matching links which will not be checked, separated by white-space.")
-                .value_name("LINKS")
+                .value_name("GLOBS")
                 .value_delimiter(',')
                 .action(ArgAction::Append)
                 .required(false)
