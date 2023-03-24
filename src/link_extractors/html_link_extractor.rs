@@ -93,7 +93,7 @@ impl LinkExtractor for HtmlLinkExtractor {
                                     column: link_column + 1,
                                     line: link_line + 1,
                                     target: link.to_string(),
-                                    source: "".to_string(),
+                                    source: String::new(),
                                 });
                                 state = ParserState::Text;
                             }

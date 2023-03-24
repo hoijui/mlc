@@ -89,7 +89,7 @@ pub struct Config {
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let ignore_str: Vec<String> = match &self.optional.ignore_links {
-            Some(s) => s.iter().map(|m| m.to_string()).collect(),
+            Some(s) => s.iter().map(ToString::to_string).collect(),
             None => vec![],
         };
         let root_dir_str = match &self.optional.root_dir {
@@ -101,7 +101,7 @@ impl fmt::Display for Config {
             None => vec![],
         };
         let markup_types_str: Vec<String> = match &self.optional.markup_types {
-            Some(p) => p.iter().map(|m| format!["{:?}", m]).collect(),
+            Some(p) => p.iter().map(|m| format!("{m:?}")).collect(),
             None => vec![],
         };
         write!(
@@ -162,9 +162,9 @@ fn print_helper(
         status_code, link.source, link.line, link.column, link.target, msg
     );
     if error_channel {
-        eprintln!("{}", link_str);
+        eprintln!("{link_str}");
     } else {
-        println!("{}", link_str);
+        println!("{link_str}");
     }
 }
 
@@ -222,8 +222,7 @@ pub async fn run(config: &Config) -> Result<(), ()> {
                             return FinalResult {
                                 target: target.clone(),
                                 result_code: LinkCheckResult::Failed(format!(
-                                    "Could not parse URL type. Err: {:?}",
-                                    error
+                                    "Could not parse URL type. Err: {error:?}"
                                 )),
                             }
                         }
@@ -328,12 +327,12 @@ pub async fn run(config: &Config) -> Result<(), ()> {
         .map(|e| link_target_groups[&e.target].len())
         .sum();
     let sum = skipped + error_sum + warnings + oks;
-    println!("Result ({} links):", sum);
+    println!("Result ({sum} links):");
     println!();
-    println!("OK       {}", oks);
-    println!("Skipped  {}", skipped);
-    println!("Warnings {}", warnings);
-    println!("Errors   {}", error_sum);
+    println!("OK       {oks}");
+    println!("Skipped  {skipped}");
+    println!("Warnings {warnings}");
+    println!("Errors   {error_sum}");
     println!();
 
     if errors.is_empty() {

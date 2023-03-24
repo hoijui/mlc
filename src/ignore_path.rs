@@ -50,7 +50,7 @@ impl TryFrom<&Path> for IgnorePath {
         } else {
             return Err(Error::UnknownPathType(path));
         };
-        Ok(IgnorePath { r#type, path })
+        Ok(Self { r#type, path })
     }
 }
 
@@ -72,6 +72,7 @@ impl TryFrom<&String> for IgnorePath {
 
 impl IgnorePath {
     #[inline]
+    #[must_use]
     pub fn to_str(&self) -> Option<&str> {
         self.path.to_str()
     }
@@ -80,7 +81,7 @@ impl IgnorePath {
 pub fn is_valid(path_str: &str) -> Result<(), String> {
     IgnorePath::try_from(path_str)
         .map(|_| ())
-        .map_err(|err| format!("{:?}", err))
+        .map_err(|err| format!("{err:?}"))
 }
 
 pub fn is_valid_string(path_str: String) -> Result<(), String> {

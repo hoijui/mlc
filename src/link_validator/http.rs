@@ -13,7 +13,7 @@ pub async fn check_http(target: &str) -> LinkCheckResult {
 
     match http_request(&url).await {
         Ok(response) => response,
-        Err(error_msg) => LinkCheckResult::Failed(format!("Http(s) request failed: {}", error_msg)),
+        Err(error_msg) => LinkCheckResult::Failed(format!("Http(s) request failed: {error_msg}")),
     }
 }
 
@@ -49,7 +49,7 @@ async fn http_request(url: &reqwest::Url) -> reqwest::Result<LinkCheckResult> {
     let response = match CLIENT.execute(head_request).await {
         Ok(r) => r,
         Err(e) => {
-            println!("Head request error: {}. Retry with get-request.", e);
+            println!("Head request error: {e}. Retry with get-request.");
             CLIENT.execute(get_request).await?
         }
     };

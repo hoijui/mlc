@@ -45,16 +45,16 @@ impl LinkCheckResult {
             static ref CODE_ERR: ColoredString = "Err".red();
         }
         match self {
-            LinkCheckResult::Ok => &CODE_OK,
-            LinkCheckResult::NotImplemented(_) | LinkCheckResult::Warning(_) => &CODE_WARN,
-            LinkCheckResult::Ignored(_) => &CODE_SKIP,
-            LinkCheckResult::Failed(_) => &CODE_ERR,
+            Self::Ok => &CODE_OK,
+            Self::NotImplemented(_) | Self::Warning(_) => &CODE_WARN,
+            Self::Ignored(_) => &CODE_SKIP,
+            Self::Failed(_) => &CODE_ERR,
         }
     }
 
     #[must_use]
     pub fn is_err(&self) -> bool {
-        matches!(self, LinkCheckResult::Failed(_))
+        matches!(self, Self::Failed(_))
     }
 }
 

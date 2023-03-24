@@ -16,10 +16,10 @@ pub enum MarkupType {
 impl FromStr for MarkupType {
     type Err = ();
 
-    fn from_str(s: &str) -> Result<MarkupType, ()> {
+    fn from_str(s: &str) -> Result<Self, ()> {
         match s {
-            "md" => Ok(MarkupType::Markdown),
-            "html" => Ok(MarkupType::Html),
+            "md" => Ok(Self::Markdown),
+            "html" => Ok(Self::Html),
             _ => Err(()),
         }
     }
@@ -29,7 +29,7 @@ impl MarkupType {
     #[must_use]
     pub fn file_extensions(&self) -> Vec<String> {
         match self {
-            MarkupType::Markdown => vec![
+            Self::Markdown => vec![
                 "md".to_string(),
                 "markdown".to_string(),
                 "mkdown".to_string(),
@@ -41,7 +41,7 @@ impl MarkupType {
                 "text".to_string(),
                 "rmd".to_string(),
             ],
-            MarkupType::Html => vec!["htm".to_string(), "html".to_string(), "xhtml".to_string()],
+            Self::Html => vec!["htm".to_string(), "html".to_string(), "xhtml".to_string()],
         }
     }
 }

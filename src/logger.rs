@@ -24,8 +24,6 @@ pub fn init(log_level: &LogLevel) {
         TerminalMode::Mixed,
         ColorChoice::Auto,
     )]);
-    if err.is_err() {
-        panic!("Failed to init logger! Error: {:?}", err);
-    }
+    assert!(err.is_ok(), "Failed to init logger! Error: {:?}", err);
     debug!("Initialized logging");
 }

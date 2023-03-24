@@ -148,7 +148,7 @@ pub fn parse_args() -> Config {
     }
 
     if let Some(ignore_links) = matches.get_many::<String>("ignore-links") {
-        opt.ignore_links = Some(ignore_links.map(|x| x.to_string()).collect());
+        opt.ignore_links = Some(ignore_links.map(ToString::to_string).collect());
     }
 
     if let Some(ignore_path) = matches.get_many::<String>("ignore-path") {
@@ -168,7 +168,7 @@ pub fn parse_args() -> Config {
         )
         .to_path_buf();
         if !root_path.is_dir() {
-            eprintln!("Root path '{:?}' must be a directory!", root_path);
+            eprintln!("Root path '{root_path:?}' must be a directory!");
             std::process::exit(1);
         }
         opt.root_dir = Some(root_path)
