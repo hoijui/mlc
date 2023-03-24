@@ -60,7 +60,7 @@ pub fn parse_args() -> Config {
                 .value_name("PATHS")
                 .value_delimiter(',')
                 .action(ArgAction::Append)
-                .required(false),
+                .required(false)
         )
         .arg(
             Arg::new("ignore-links")
@@ -71,7 +71,7 @@ pub fn parse_args() -> Config {
                 .value_name("LINKS")
                 .value_delimiter(',')
                 .action(ArgAction::Append)
-                .required(false),
+                .required(false)
         )
         .arg(
             Arg::new("markup-types")
@@ -83,7 +83,7 @@ pub fn parse_args() -> Config {
                 .action(ArgAction::Append)
                 .value_delimiter(',')
                 .value_parser(["md", "html"])
-                .required(false),
+                .required(false)
         )
         .arg(
             Arg::new("throttle")
