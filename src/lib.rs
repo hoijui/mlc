@@ -181,10 +181,11 @@ pub async fn run(config: &Config) -> Result<(), ()> {
 
     let mut skipped = 0;
 
-    let ignore_links: Vec<WildMatch> = match &config.optional.ignore_links {
-        Some(s) => s.iter().map(|m| WildMatch::new(m)).collect(),
-        None => vec![],
-    };
+    let ignore_links = config
+        .optional
+        .ignore_links
+        .as_ref()
+        .map_or_else(Vec::new, |s| s.iter().map(|m| WildMatch::new(m)).collect());
     for link in &links {
         if ignore_links.iter().any(|m| m.matches(&link.target)) {
             print_helper(

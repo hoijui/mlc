@@ -9,10 +9,11 @@ use walkdir::WalkDir;
 /// and stores them in `result`.
 pub fn find(config: &Config, result: &mut Vec<MarkupFile>) {
     let root = &config.directory;
-    let markup_types = match &config.optional.markup_types {
-        Some(t) => t,
-        None => panic!("Bug! markup_types must be set"),
-    };
+    let markup_types = config
+        .optional
+        .markup_types
+        .as_ref()
+        .map_or_else(|| panic!("Bug! markup_types must be set"), |t| t);
 
     info!(
         "Searching for files of markup types '{:?}' in directory '{:?}' ...",

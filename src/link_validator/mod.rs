@@ -53,7 +53,7 @@ impl LinkCheckResult {
     }
 
     #[must_use]
-    pub fn is_err(&self) -> bool {
+    pub const fn is_err(&self) -> bool {
         matches!(self, Self::Failed(_))
     }
 }

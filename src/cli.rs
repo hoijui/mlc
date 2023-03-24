@@ -144,7 +144,7 @@ pub fn parse_args() -> Config {
     }
 
     if matches.get_flag("match-file-extension") {
-        opt.match_file_extension = Some(true)
+        opt.match_file_extension = Some(true);
     }
 
     if let Some(ignore_links) = matches.get_many::<String>("ignore-links") {
@@ -171,7 +171,7 @@ pub fn parse_args() -> Config {
             eprintln!("Root path '{root_path:?}' must be a directory!");
             std::process::exit(1);
         }
-        opt.root_dir = Some(root_path)
+        opt.root_dir = Some(root_path);
     }
 
     Config {

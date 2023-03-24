@@ -15,13 +15,11 @@ pub async fn check_filesystem(target: &str, config: &Config) -> LinkCheckResult 
         && target.extension().is_none()
     {
         // Check if file exists ignoring the file extension
-        let target_file_name = match target.file_name() {
-            Some(s) => s,
-            None => return LinkCheckResult::Failed("Target path not found.".to_string()),
+        let Some(target_file_name) = target.file_name() else {
+            return LinkCheckResult::Failed("Target path not found.".to_string())
         };
-        let target_parent = match target.parent() {
-            Some(s) => s,
-            None => return LinkCheckResult::Failed("Target parent not found.".to_string()),
+        let Some(target_parent) = target.parent() else {
+            return LinkCheckResult::Failed("Target parent not found.".to_string())
         };
         debug!("Check if file ignoring the extension exists.");
         if target_parent.exists().await {
@@ -97,10 +95,9 @@ async fn absolute_target_path(source: &str, target: &PathBuf) -> PathBuf {
             .await
             .unwrap_or_else(|_| panic!("Path '{}' does not exist.", source));
         let parent = abs_source.parent().unwrap_or(&ROOT);
-        let new_target = match target.strip_prefix(format!(".{MAIN_SEPARATOR}")) {
-            Ok(t) => t,
-            Err(_) => target,
-        };
+        let new_target = target
+            .strip_prefix(format!(".{MAIN_SEPARATOR}"))
+            .map_or(target.as_path(), |t| t);
         parent.join(new_target)
     } else {
         target.clone()
