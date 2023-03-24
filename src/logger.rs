@@ -3,17 +3,12 @@ extern crate simplelog;
 use serde::Deserialize;
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Deserialize)]
 pub enum LogLevel {
     Info,
+    #[default]
     Warn,
     Debug,
-}
-
-impl Default for LogLevel {
-    fn default() -> Self {
-        LogLevel::Warn
-    }
 }
 
 pub fn init(log_level: &LogLevel) {
