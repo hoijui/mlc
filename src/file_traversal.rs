@@ -31,7 +31,9 @@ pub fn find(config: &Config, result: &mut Vec<MarkupFile>) {
             let path = entry.path();
             let abs_path = fs::canonicalize(path).expect("Expected path to exist.");
             let ignore = if let Some(ignore_paths) = &config.optional.ignore_paths {
-                ignore_paths.iter().any(|ignore_path| ignore_path.matches(&abs_path))
+                ignore_paths
+                    .iter()
+                    .any(|ignore_path| ignore_path.matches(&abs_path))
             } else {
                 false
             };

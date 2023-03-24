@@ -10,7 +10,7 @@ pub async fn check_filesystem(target: &str, config: &Config) -> LinkCheckResult 
     let target = Path::new(target);
     debug!("Absolute target path: '{:?}'", target);
     if target.exists().await {
-        return LinkCheckResult::Ok
+        return LinkCheckResult::Ok;
     } else if !config.optional.match_file_extension.unwrap_or_default()
         && target.extension().is_none()
     {

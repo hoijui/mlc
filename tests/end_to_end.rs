@@ -19,8 +19,12 @@ async fn end_to_end() {
             throttle: None,
             ignore_links: Some(vec!["./doc/broken-local-link.doc".to_string()]),
             ignore_paths: Some(vec![
-                "benches/benchmark/markdown/ignore_me.md".try_into().unwrap(),
-                "./benches/benchmark/markdown/ignore_me_dir".try_into().unwrap(),
+                "benches/benchmark/markdown/ignore_me.md"
+                    .try_into()
+                    .unwrap(),
+                "./benches/benchmark/markdown/ignore_me_dir"
+                    .try_into()
+                    .unwrap(),
             ]),
             root_dir: None,
         },

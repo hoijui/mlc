@@ -45,7 +45,8 @@ pub struct OptionalConfig {
     pub match_file_extension: Option<bool>,
     #[serde(rename(deserialize = "ignore-links"))]
     pub ignore_links: Option<Vec<String>>,
-    #[serde(rename(deserialize = "ignore-path"))] // TODO maybe rename to the plural version as well?
+    #[serde(rename(deserialize = "ignore-path"))]
+    // TODO maybe rename to the plural version as well?
     pub ignore_paths: Option<Vec<IgnorePath>>,
     #[serde(rename(deserialize = "root-dir"))]
     pub root_dir: Option<PathBuf>,

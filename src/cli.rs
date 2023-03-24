@@ -156,7 +156,7 @@ pub fn parse_args() -> Config {
             ignore_path
                 .map(IgnorePath::try_from)
                 .collect::<Result<Vec<IgnorePath>, _>>()
-                .unwrap()
+                .unwrap(),
         );
     }
 
