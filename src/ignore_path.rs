@@ -76,3 +76,13 @@ impl IgnorePath {
         self.path.to_str()
     }
 }
+
+pub fn is_valid(path_str: &str) -> Result<(), String> {
+    IgnorePath::try_from(path_str)
+        .map(|_| ())
+        .map_err(|err| format!("{:?}", err))
+}
+
+pub fn is_valid_string(path_str: String) -> Result<(), String> {
+    is_valid(path_str.as_ref())
+}

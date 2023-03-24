@@ -1,3 +1,4 @@
+// use crate::ignore_path;
 use crate::ignore_path::IgnorePath;
 use crate::markup::MarkupType;
 use crate::Config;
@@ -60,6 +61,7 @@ pub fn parse_args() -> Config {
                 .value_name("PATHS")
                 .value_delimiter(',')
                 .action(ArgAction::Append)
+                // .value_parser(ignore_path::is_valid_string)
                 .required(false)
         )
         .arg(
