@@ -25,7 +25,7 @@ pub fn parse_args() -> Config {
     let matches = Command::new(crate_name!())
         .arg(
             Arg::new("directory")
-                .help("Check all links in given directory and subdirectory")
+                .help("Check all links in given directory and subdirectories")
                 .required(false)
                 .index(1),
         )
