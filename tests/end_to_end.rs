@@ -18,7 +18,7 @@ async fn end_to_end() {
             match_file_extension: None,
             throttle: None,
             ignore_links: Some(vec!["./doc/broken-local-link.doc".to_string()]),
-            ignore_path: Some(vec![
+            ignore_paths: Some(vec![
                 fs::canonicalize("benches/benchmark/markdown/ignore_me.md").unwrap(),
                 fs::canonicalize("./benches/benchmark/markdown/ignore_me_dir").unwrap(),
             ]),
@@ -41,7 +41,7 @@ async fn end_to_end_different_root() {
             offline: None,
             match_file_extension: None,
             ignore_links: None,
-            ignore_path: None,
+            ignore_paths: None,
             throttle: None,
             root_dir: Some(test_files),
         },

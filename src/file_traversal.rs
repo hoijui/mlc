@@ -30,7 +30,7 @@ pub fn find(config: &Config, result: &mut Vec<MarkupFile>) {
         if let Some(markup_type) = markup_type(&f_name, markup_types) {
             let path = entry.path();
             let abs_path = fs::canonicalize(path).expect("Expected path to exist.");
-            let ignore = match &config.optional.ignore_path {
+            let ignore = match &config.optional.ignore_paths {
                 Some(p) => p.iter().any(|ignore_path| {
                     if ignore_path.is_file() {
                         ignore_path == &abs_path
@@ -44,7 +44,7 @@ pub fn find(config: &Config, result: &mut Vec<MarkupFile>) {
             };
             if ignore {
                 debug!(
-                    "Ignoring file '{:?}', because it is in the ignore path list.",
+                    "Ignoring file '{:?}', because it is in the ignore paths list.",
                     path
                 );
             } else {

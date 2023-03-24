@@ -43,8 +43,8 @@ pub struct OptionalConfig {
     pub match_file_extension: Option<bool>,
     #[serde(rename(deserialize = "ignore-links"))]
     pub ignore_links: Option<Vec<String>>,
-    #[serde(rename(deserialize = "ignore-path"))]
-    pub ignore_path: Option<Vec<PathBuf>>,
+    #[serde(rename(deserialize = "ignore-path"))] // TODO maybe rename to the plural version as well?
+    pub ignore_paths: Option<Vec<PathBuf>>,
     #[serde(rename(deserialize = "root-dir"))]
     pub root_dir: Option<PathBuf>,
     pub throttle: Option<u32>,
@@ -66,7 +66,7 @@ impl fmt::Display for Config {
             Some(p) => p.to_str().unwrap_or(""),
             None => "",
         };
-        let ignore_path_str: Vec<String> = match &self.optional.ignore_path {
+        let ignore_path_str: Vec<String> = match &self.optional.ignore_paths {
             Some(p) => p.iter().map(|m| m.to_str().unwrap().to_string()).collect(),
             None => vec![],
         };

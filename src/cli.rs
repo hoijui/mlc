@@ -111,7 +111,7 @@ pub fn parse_args() -> Config {
     }
 
     if let Some(ignore_path) = matches.get_many::<String>("ignore-path") {
-        opt.ignore_path = Some(
+        opt.ignore_paths = Some(
             ignore_path
                 .map(|x| {
                     let path = Path::new(x).to_path_buf();
