@@ -1,7 +1,7 @@
 extern crate simplelog;
 
 use serde::Deserialize;
-use simplelog::*;
+use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum LogLevel {
