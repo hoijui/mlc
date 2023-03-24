@@ -20,6 +20,7 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep_until, Duration, Instant};
 pub mod cli;
 pub mod file_traversal;
+pub mod ignore_path;
 pub mod link_extractors;
 pub mod link_validator;
 pub mod logger;
@@ -28,6 +29,7 @@ pub use colored::*;
 pub use wildmatch::WildMatch;
 
 use futures::{stream, StreamExt};
+use ignore_path::IgnorePath;
 use link_validator::LinkCheckResult;
 use url::Url;
 
@@ -44,7 +46,7 @@ pub struct OptionalConfig {
     #[serde(rename(deserialize = "ignore-links"))]
     pub ignore_links: Option<Vec<String>>,
     #[serde(rename(deserialize = "ignore-path"))] // TODO maybe rename to the plural version as well?
-    pub ignore_paths: Option<Vec<PathBuf>>,
+    pub ignore_paths: Option<Vec<IgnorePath>>,
     #[serde(rename(deserialize = "root-dir"))]
     pub root_dir: Option<PathBuf>,
     pub throttle: Option<u32>,
@@ -84,7 +86,7 @@ Offline: {}
 MatchExt: {}
 RootDir: {}
 IgnoreLinks: {} 
-IgnorePath: {:?}
+IgnorePaths: {:?}
 Throttle: {} ms",
             self.optional.debug.unwrap_or(false),
             self.directory.to_str().unwrap_or_default(),

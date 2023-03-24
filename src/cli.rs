@@ -1,8 +1,10 @@
+use crate::ignore_path::IgnorePath;
 use crate::markup::MarkupType;
 use crate::Config;
 use crate::OptionalConfig;
 use clap::Arg;
 use clap::ArgAction;
+use std::convert::TryFrom;
 use std::fs;
 use std::path::Path;
 use std::path::MAIN_SEPARATOR;
@@ -113,14 +115,9 @@ pub fn parse_args() -> Config {
     if let Some(ignore_path) = matches.get_many::<String>("ignore-path") {
         opt.ignore_paths = Some(
             ignore_path
-                .map(|x| {
-                    let path = Path::new(x).to_path_buf();
-                    match fs::canonicalize(&path) {
-                        Ok(p) => p,
-                        Err(e) => panic!("Ignore path {:?} not found. {:?}.", &path, e),
-                    }
-                })
-                .collect(),
+                .map(IgnorePath::try_from)
+                .collect::<Result<Vec<IgnorePath>, _>>()
+                .unwrap()
         );
     }
 
