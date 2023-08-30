@@ -16,10 +16,10 @@ pub async fn check_filesystem(target: &str, config: &Config) -> LinkCheckResult 
     {
         // Check if file exists ignoring the file extension
         let Some(target_file_name) = target.file_name() else {
-            return LinkCheckResult::Failed("Target path not found.".to_string())
+            return LinkCheckResult::Failed("Target path not found.".to_string());
         };
         let Some(target_parent) = target.parent() else {
-            return LinkCheckResult::Failed("Target parent not found.".to_string())
+            return LinkCheckResult::Failed("Target parent not found.".to_string());
         };
         debug!("Check if file ignoring the extension exists.");
         if target_parent.exists().await {
