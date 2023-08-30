@@ -4,6 +4,7 @@ use async_std::fs::canonicalize;
 use async_std::path::Path;
 use async_std::path::PathBuf;
 use std::path::MAIN_SEPARATOR;
+use std::path::MAIN_SEPARATOR_STR;
 use walkdir::WalkDir;
 
 pub async fn check_filesystem(target: &str, config: &Config) -> LinkCheckResult {
@@ -52,9 +53,7 @@ pub async fn check_filesystem(target: &str, config: &Config) -> LinkCheckResult 
 }
 
 pub async fn resolve_target_link(source: &str, target: &str, config: &Config) -> String {
-    let mut normalized_link = target
-        .replace('/', &MAIN_SEPARATOR.to_string())
-        .replace('\\', &MAIN_SEPARATOR.to_string());
+    let mut normalized_link = target.replace(['/', '\\'], MAIN_SEPARATOR_STR);
     if let Some(idx) = normalized_link.find('#') {
         warn!(
             "Strip everything after #. The chapter (aka anchor aka fragment) part '{}' is not checked.",
@@ -81,7 +80,7 @@ pub async fn resolve_target_link(source: &str, target: &str, config: &Config) ->
         .to_string();
     // Remove verbatim path identifier which causes trouble on windows when using ../../ in paths
     abs_path
-        .strip_prefix(r#"\\?\"#)
+        .strip_prefix(r"\\?\")
         .unwrap_or(&abs_path)
         .to_string()
 }

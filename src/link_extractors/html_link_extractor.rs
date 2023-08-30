@@ -63,7 +63,7 @@ impl LinkExtractor for HtmlLinkExtractor {
                     ParserState::EqualSign => {
                         match line_chars.get(column) {
                             Some(x) if x.is_whitespace() => {}
-                            Some(x) if x == &'=' => state = ParserState::Link,
+                            Some(&'=') => state = ParserState::Link,
                             Some(_) => state = ParserState::Anchor,
                             None => {}
                         };
