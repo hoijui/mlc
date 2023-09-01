@@ -30,7 +30,7 @@ futures = "0.3"
 wildmatch = "2.1.1"
 proc-macro2 = "1.0.66" # HACK Temporary fix; remove and see if `cargo clippy --release -- --deny clippy::pedantic` is still working
 pulldown-cmark = "0.9.2"
-toml = "0.5.9"
+toml = "0.7.3"
 serde = { version = "1.0.147", features = ["derive"] }
 url-escape = "0.1.1"
 value-bag = "1.0.0" # HACK Temporary fix; remove and see if `cargo clippy --release -- --deny clippy::pedantic` is still working
