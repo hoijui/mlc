@@ -6,6 +6,7 @@ use crate::OptionalConfig;
 use clap::Arg;
 use clap::ArgAction;
 use clap::Command;
+use const_format::formatcp;
 use std::convert::TryFrom;
 use std::fs;
 use std::path::Path;
@@ -13,6 +14,42 @@ use std::path::MAIN_SEPARATOR;
 use std::path::MAIN_SEPARATOR_STR;
 
 const CONFIG_FILE_PATH: &str = "./.mlc.toml";
+
+const A_L_VERSION: &str = "version";
+const A_S_VERSION: char = 'V';
+const A_S_QUIET: char = 'q';
+const A_L_QUIET: &str = "quiet";
+
+fn arg_version() -> Arg {
+    Arg::new(A_L_VERSION)
+        .help(formatcp!(
+            "Print version information and exit. \
+May be combined with -{A_S_QUIET},--{A_L_QUIET}, \
+to really only output the version string."
+        ))
+        .short(A_S_VERSION)
+        .long(A_L_VERSION)
+        .action(ArgAction::SetTrue)
+}
+
+fn arg_quiet() -> Arg {
+    Arg::new(A_L_QUIET)
+        .help("Minimize or suppress output to stdout")
+        .long_help("Minimize or suppress output to stdout, and only shows log output on stderr.")
+        .action(ArgAction::SetTrue)
+        .short(A_S_QUIET)
+        .long(A_L_QUIET)
+}
+
+fn print_version_and_exit(quiet: bool) {
+    #![allow(clippy::print_stdout)]
+
+    if !quiet {
+        print!("{} ", clap::crate_name!());
+    }
+    println!("{}", crate::VERSION);
+    std::process::exit(0);
+}
 
 #[must_use]
 pub fn parse_args() -> Config {
@@ -108,10 +145,19 @@ pub fn parse_args() -> Config {
                 .help("Path to the root folder used to resolve all relative paths")
                 .required(false)
         )
-        .version(crate_version!())
+        .arg(arg_quiet())
+        .arg(arg_version())
+        .version(crate::VERSION)
+        .disable_version_flag(true)
         .author(crate_authors!())
         .about(crate_description!())
         .get_matches();
+
+    let quiet = matches.get_flag(A_L_QUIET);
+    let version = matches.get_flag(A_L_VERSION);
+    if version {
+        print_version_and_exit(quiet);
+    }
 
     let default_dir = format!(".{}", &MAIN_SEPARATOR);
     let dir_string = matches

@@ -17,6 +17,8 @@ is-it-maintained-issue-resolution = { repository = "becheran/mlc" }
 
 [dependencies]
 clap = { version = "4.0.26", features = ["cargo"] }
+const_format = "0.2"
+git-version = "0.3"
 log = "0.4.17"
 simplelog = "0.12"
 walkdir = "2.3.2"

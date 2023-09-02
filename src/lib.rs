@@ -58,9 +58,12 @@ pub use colored::*;
 pub use wildmatch::WildMatch;
 
 use futures::{stream, StreamExt};
+use git_version::git_version;
 use ignore_path::IgnorePath;
 use link_validator::LinkCheckResult;
 use url::Url;
+
+pub const VERSION: &str = git_version!();
 
 const PARALLEL_REQUESTS: usize = 20;
 
