@@ -8,27 +8,8 @@ use std::process;
 #[macro_use]
 extern crate clap;
 
-fn print_header() {
-    let width = 60;
-    let header = format!("markup link checker - mlc v{:}", crate_version!());
-    println!();
-    println!("{:+<1$}", "", width);
-    print!("+");
-    print!("{: <1$}", "", width - 2);
-    println!("+");
-    print!("+");
-    print!("{: ^1$}", header, width - 2);
-    println!("+");
-    print!("+");
-    print!("{: <1$}", "", width - 2);
-    println!("+");
-    println!("{:+<1$}", "", width);
-    println!();
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    print_header();
     let config = cli::parse_args();
     let log_level = match config.optional.debug {
         Some(true) => logger::LogLevel::Debug,
