@@ -28,10 +28,12 @@ reqwest = {version="0.11.13", features = ["native-tls-vendored", "brotli", "gzip
 tokio = {version="1.21.2", features = ["rt-multi-thread", "macros", "time"] }
 futures = "0.3"
 wildmatch = "2.1.1"
+proc-macro2 = "1.0.66" # HACK Temporary fix; remove and see if `cargo clippy --release -- --deny clippy::pedantic` is still working
 pulldown-cmark = "0.9.2"
 toml = "0.5.9"
 serde = { version = "1.0.147", features = ["derive"] }
 url-escape = "0.1.1"
+value-bag = "1.0.0" # HACK Temporary fix; remove and see if `cargo clippy --release -- --deny clippy::pedantic` is still working
 
 [dev-dependencies]
 ntest = "0.9.0"
