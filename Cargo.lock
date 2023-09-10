@@ -967,7 +967,7 @@ dependencies = [
 
 [[package]]
 name = "mlc"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "async-std",
  "clap 4.0.26",
