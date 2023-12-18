@@ -60,11 +60,8 @@ impl LinkCheckResult {
     #[must_use]
     pub const fn has_issue(&self) -> bool {
         match self {
-            Self::Ok => false,
-            Self::Failed(_) => true,
-            Self::Warning(_) => true,
-            Self::Ignored(_) => false,
-            Self::NotImplemented(_) => true,
+            Self::Ok | Self::Ignored(..) => false,
+            Self::Failed(..) | Self::Warning(..) | Self::NotImplemented(..) => true,
         }
     }
 }
