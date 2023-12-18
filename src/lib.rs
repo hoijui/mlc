@@ -8,7 +8,7 @@
 //#![warn(clippy::indexing_slicing)]
 #![warn(clippy::clone_on_ref_ptr)]
 #![warn(clippy::try_err)]
-#![warn(clippy::shadow_reuse)]
+// #![warn(clippy::shadow_reuse)]
 //#![warn(clippy::empty_structs_with_brackets)]
 #![allow(clippy::else_if_without_else)]
 #![allow(clippy::option_if_let_else)]
