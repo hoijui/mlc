@@ -5,9 +5,6 @@ use mlc::cli;
 use mlc::logger;
 use std::process;
 
-#[macro_use]
-extern crate clap;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = cli::parse_args();
