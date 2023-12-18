@@ -172,8 +172,9 @@ pub fn parse_args() -> Config {
         opt.debug = Some(true);
     }
 
-    if let Some(throttle) = matches.get_one::<u32>("throttle") {
-        opt.throttle = Some(*throttle);
+    if let Some(throttle_str) = matches.get_one::<String>("throttle") {
+        let throttle = throttle_str.parse::<u32>().unwrap();
+        opt.throttle = Some(throttle);
     }
 
     if let Some(markup_types) = matches.get_many::<String>("markup-types") {
