@@ -63,7 +63,7 @@ use ignore_path::IgnorePath;
 use link_validator::LinkCheckResult;
 use url::Url;
 
-pub const VERSION: &str = git_version!();
+pub const VERSION: &str = git_version!(cargo_prefix = "", fallback = "unknown");
 
 const PARALLEL_REQUESTS: usize = 20;
 
