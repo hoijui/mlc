@@ -30,14 +30,14 @@ reqwest = { version = "0.11", features = ["native-tls-vendored", "brotli", "gzip
 serde = { version = "1.0", features = ["derive"] }
 simplelog = "0.12"
 tokio = { version = "1.21", features = ["rt-multi-thread", "macros", "time"] }
-toml = "0.7"
+toml = "0.8"
 url = "2.2"
 url-escape = "0.1"
 walkdir = "2.3"
 wildmatch = "2.1"
 
 [dev-dependencies]
-criterion = "0.4"
+criterion = "0.5"
 ntest = "0.9"
 
 [[bench]]
