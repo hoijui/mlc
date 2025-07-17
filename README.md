@@ -3,7 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/mlc.svg?color=orange)](https://crates.io/crates/mlc)
 [![downloads](https://badgen.net/crates/d/mlc?color=blue)](https://crates.io/crates/mlc)
 [![build status](https://github.com/becheran/mlc/actions/workflows/rust.yml/badge.svg)](https://github.com/becheran/mlc/actions/workflows/rust.yml)
-[![license](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/mit)
+[![license](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/mit)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/becheran/mlc/blob/master/CONTRIBUTING.md)
 
 [![asciicast](https://asciinema.org/a/299100.svg)](https://asciinema.org/a/299100)
@@ -126,7 +126,7 @@ The following arguments are available:
 | `--version`      | `-V` | Print current version of mlc |
 | `--ignore-path`  | `-p` | Comma separated list of directories or files which shall be ignored. For example  |
 | `--ignore-links` | `-i` | Comma separated list of links which shall be ignored. Use simple `?` and `*` wildcards. For example `--ignore-links "http*://crates.io*"` will skip all links to the crates.io website. See the [used lib](https://github.com/becheran/wildmatch) for more information.  |
-| `--markup-types` | `-t` | Comma separated list list of markup types which shall be checked [possible values: md, html] |
+| `--markup-types` | `-t` | Comma separated list list of markup types which shall be checked \[possible values: md, html\] |
 | `--root-dir`     | `-r` | All links to the file system starting with a slash on linux or backslash on windows will use another virtual root dir. For example the link in a file `[link](/dir/other/file.md)` checked with the cli arg `--root-dir /env/another/dir` will let *mlc* check the existence of `/env/another/dir/dir/other/file.md`. |
 | `--throttle`     | `-T` | Number of milliseconds to wait in between web requests to the same host. Default is zero which means no throttling. Set this if you need to slow down the web request frequency to avoid `429 - Too Many Requests` responses. For example with `--throttle 15`, between each http check to the same host, 15 ms will be waited. Note that this setting can slow down the link checker. |
 
