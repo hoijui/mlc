@@ -8,7 +8,10 @@
 
 [![asciicast](https://asciinema.org/a/299100.svg)](https://asciinema.org/a/299100)
 
-Check for broken links in markup files. Currently `html` and `markdown` files are supported. The Markup Link Checker can easily be integrated in your CI pipeline to prevent broken links in your markup docs.
+Check for broken links in markup files.
+Currently `html` and `markdown` files are supported.
+The Markup Link Checker can easily be integrated in your CI pipeline
+to prevent broken links in your markup docs.
 
 ## Features
 
@@ -29,7 +32,8 @@ There are different ways to install and use *mlc*.
 
 ### Cargo
 
-Use rust's package manager [cargo](https://doc.rust-lang.org/cargo/) to install *mlc* from [crates.io](https://crates.io/crates/mlc):
+Use rust's package manager [cargo](https://doc.rust-lang.org/cargo/)
+to install *mlc* from [crates.io](https://crates.io/crates/mlc):
 
 ``` bash
 cargo install mlc
@@ -37,13 +41,17 @@ cargo install mlc
 
 ### Download Binaries
 
-To download a compiled binary version of *mlc* go to [github releases](https://github.com/becheran/mlc/releases) and download the binaries compiled for `x86_64-unknown-linux-gnu` and `x86_64-apple-darwin`.
+To download a compiled binary version of *mlc*
+go to [github releases](https://github.com/becheran/mlc/releases)
+and download the binaries compiled for `x86_64-unknown-linux-gnu`
+or `x86_64-apple-darwin`.
 
 ## CI Pipeline Integration
 
 ### GitHub Actions
 
-Use *mlc* in GitHub using the *GitHub-Action* from the [Marketplace](https://github.com/marketplace/actions/markup-link-checker-mlc).
+Use *mlc* in GitHub using the *GitHub-Action*
+from the [Marketplace](https://github.com/marketplace/actions/markup-link-checker-mlc).
 
 ``` yaml
 - name: Markup Link Checker (mlc)
@@ -59,28 +67,36 @@ Use *mlc* command line arguments using the `with` argument:
     args: ./README.md
 ```
 
-The action does uses [GitHub workflow commands](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions) to highlight broken links:
+The action does uses [GitHub workflow commands](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions)
+to highlight broken links:
 
 ![annotation](./docs/FailingAnnotation.PNG)
 
 ### Binary
 
-To integrate *mlc* in your CI pipeline running in a *linux x86_64 environment* you can add the following commands to download the tool:
+To integrate *mlc* in your CI pipeline running in a *linux x86_64 environment*,
+you can add the following commands to download the tool:
 
 ``` bash
 curl -L https://github.com/becheran/mlc/releases/download/v0.16.3/mlc-x86_64-linux -o mlc
 chmod +x mlc
 ```
 
-For example take a look at the [ntest repo](https://github.com/becheran/ntest/blob/master/.github/workflows/ci.yml) which uses *mlc* in the CI pipeline.
+For example,
+take a look at the [ntest repo](https://github.com/becheran/ntest/blob/master/.github/workflows/ci.yml),
+which uses *mlc* in the CI pipeline.
 
 ### Docker
 
-Use the *mlc* docker image from the [docker hub](https://hub.docker.com/repository/docker/becheran/mlc) which includes *mlc*.
+Use the *mlc* docker image from the [docker hub](https://hub.docker.com/repository/docker/becheran/mlc),
+which includes *mlc*.
 
 ## Usage
 
-Once you have *mlc* installed, it can be called from the command line. The following call will check all links in markup files found in the current folder and all subdirectories:
+Once you have *mlc* installed,
+it can be called from the command line.
+The following call will check all links in markup files
+found in the current folder and all subdirectories:
 
 ``` bash
 mlc
@@ -114,7 +130,9 @@ The following arguments are available:
 | `--root-dir`     | `-r` | All links to the file system starting with a slash on linux or backslash on windows will use another virtual root dir. For example the link in a file `[link](/dir/other/file.md)` checked with the cli arg `--root-dir /env/another/dir` will let *mlc* check the existence of `/env/another/dir/dir/other/file.md`. |
 | `--throttle`     | `-T` | Number of milliseconds to wait in between web requests to the same host. Default is zero which means no throttling. Set this if you need to slow down the web request frequency to avoid `429 - Too Many Requests` responses. For example with `--throttle 15`, between each http check to the same host, 15 ms will be waited. Note that this setting can slow down the link checker. |
 
-All optional arguments which can be passed via the command line can also be configured via the `.mlc.toml` config file in the working dir where *mlc* is started:
+All optional arguments which can be passed via the command line
+can also be configured via the `.mlc.toml` config file
+in the working dir where *mlc* is started:
 
 ``` toml
 # Print debug information to console
@@ -137,7 +155,8 @@ root-dir="./"
 
 ## Changelog
 
-Checkout the [changelog file](https://github.com/becheran/mlc/blob/master/CHANGELOG.md) to see the changes between different versions.
+Checkout the [changelog file](https://github.com/becheran/mlc/blob/master/CHANGELOG.md)
+to see the changes between different versions.
 
 ## License
 
