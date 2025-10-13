@@ -157,7 +157,3 @@ root-dir="./"
 
 Checkout the [changelog file](https://github.com/becheran/mlc/blob/master/CHANGELOG.md)
 to see the changes between different versions.
-
-## License
-
-This project is licensed under the *MIT License* - see the [LICENSE file](https://github.com/becheran/mlc/blob/master/LICENSE) for more details.
