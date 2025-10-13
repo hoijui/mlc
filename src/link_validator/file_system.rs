@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-use crate::link_validator::LinkCheckResult;
 use crate::Config;
+use crate::link_validator::LinkCheckResult;
 use async_std::fs::canonicalize;
 use async_std::path::PathBuf as AsyncPathBuf;
 use async_std::stream::StreamExt;
@@ -42,23 +42,21 @@ pub async fn check_filesystem(target: &FileSystemTarget, config: &Config) -> Lin
             debug!("Parent {target_parent:?} exists. Search dir for file ignoring the extension.");
             let mut walkdir = WalkDir::new(target_parent);
             while let Some(entry_res) = walkdir.next().await {
-                if let Ok(entry) = entry_res {
-                    if entry.path().iter().count() == 1 {
-                        if let Ok(file_type) = entry.file_type().await {
-                            if !file_type.is_dir() {
-                                let mut file_on_system = entry.path();
-                                file_on_system.set_extension("");
-                                match file_on_system.file_name() {
-                                    Some(file_name) => {
-                                        if target_file_name == file_name {
-                                            info!("Found file {file_on_system:?}");
-                                            return LinkCheckResult::Ok;
-                                        }
-                                    }
-                                    None => break,
-                                }
+                if let Ok(entry) = entry_res
+                    && entry.path().iter().count() == 1
+                    && let Ok(file_type) = entry.file_type().await
+                    && !file_type.is_dir()
+                {
+                    let mut file_on_system = entry.path();
+                    file_on_system.set_extension("");
+                    match file_on_system.file_name() {
+                        Some(file_name) => {
+                            if target_file_name == file_name {
+                                info!("Found file {file_on_system:?}");
+                                return LinkCheckResult::Ok;
                             }
                         }
+                        None => break,
                     }
                 }
             }

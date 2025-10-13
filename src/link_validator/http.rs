@@ -11,12 +11,12 @@ use std::sync::LazyLock;
 use crate::link_validator::LinkCheckResult;
 
 use log::debug;
-use reqwest::header::ACCEPT;
-use reqwest::header::USER_AGENT;
 use reqwest::Client;
 use reqwest::Method;
 use reqwest::Request;
 use reqwest::StatusCode;
+use reqwest::header::ACCEPT;
+use reqwest::header::USER_AGENT;
 
 pub async fn check_http(target: &url::Url) -> LinkCheckResult {
     debug!("Checking http link target '{target:?}' ...");

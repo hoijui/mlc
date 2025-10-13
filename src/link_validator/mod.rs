@@ -11,9 +11,9 @@ mod mail;
 
 use std::sync::LazyLock;
 
+use crate::Config;
 use crate::link_validator::file_system::check_filesystem;
 use crate::link_validator::http::check_http;
-use crate::Config;
 use colored::ColoredString;
 use colored::Colorize;
 use log::info;

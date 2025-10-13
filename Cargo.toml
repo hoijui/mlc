@@ -8,7 +8,7 @@
 name = "mlc"
 version = "0.17.1"
 authors = ["Armin Becher <becherarmin@gmail.com>"]
-edition = "2021"
+edition = "2024"
 description = "The markup link checker (mlc) checks for broken links in markup files."
 categories = ["command-line-utilities", "development-tools::testing", "text-processing"]
 keywords = ["link-checker", "broken", "markup", "html", "markdown"]

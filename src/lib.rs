@@ -37,7 +37,7 @@
 use crate::link_validator::resolve_target_link;
 use async_std::fs::canonicalize;
 pub use colored::*;
-use futures::{stream, StreamExt};
+use futures::{StreamExt, stream};
 use git_version::git_version;
 use link_validator::LinkCheckResult;
 use log::info;
@@ -54,7 +54,7 @@ use std::fmt;
 use std::fmt::Write;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{sleep_until, Duration, Instant};
+use tokio::time::{Duration, Instant, sleep_until};
 pub use wildmatch::WildMatch;
 
 pub mod link_validator;
@@ -87,9 +87,11 @@ impl OptionalConfig {
                 Ok(new_root) => {
                     self.root_dir = Some(new_root.into());
                 }
-                Err(err) => return Err(format!(
-                    "Root path could not be converted to an absolute path. Does the directory exit? - '{err}'"
-                )),
+                Err(err) => {
+                    return Err(format!(
+                        "Root path could not be converted to an absolute path. Does the directory exit? - '{err}'"
+                    ));
+                }
             }
         }
         Ok(())
@@ -306,53 +308,51 @@ pub async fn run(config: &Config) -> Result<(), String> {
         .map(|target| {
             let waits = waits.clone();
             async move {
-                if throttle {
-                    if let Target::Http(target_url) = target {
-                        // let parsed = match Url::parse(target_url) {
-                        //     Ok(parsed) => parsed,
-                        //     Err(error) => {
-                        //         return FinalResult {
-                        //             target: target.clone(),
-                        //             result_code: LinkCheckResult::Failed(format!(
-                        //                 "Could not parse URL type. Err: {error:?}"
-                        //             )),
-                        //         }
-                        //     }
-                        // };
-                        let host = match target_url.host_str() {
-                            Some(host) => host.to_string(),
-                            None => {
-                                return FinalResult {
-                                    target: target.clone(),
-                                    result_code: LinkCheckResult::Failed(
-                                        "Failed to determine host".to_string(),
-                                    ),
-                                }
-                            }
-                        };
-                        let mut waits = waits.lock().await;
+                if throttle && let Target::Http(target_url) = target {
+                    // let parsed = match Url::parse(target_url) {
+                    //     Ok(parsed) => parsed,
+                    //     Err(error) => {
+                    //         return FinalResult {
+                    //             target: target.clone(),
+                    //             result_code: LinkCheckResult::Failed(format!(
+                    //                 "Could not parse URL type. Err: {error:?}"
+                    //             )),
+                    //         }
+                    //     }
+                    // };
+                    let host = match target_url.host_str() {
+                        Some(host) => host.to_string(),
+                        None => {
+                            return FinalResult {
+                                target: target.clone(),
+                                result_code: LinkCheckResult::Failed(
+                                    "Failed to determine host".to_string(),
+                                ),
+                            };
+                        }
+                    };
+                    let mut waits = waits.lock().await;
 
-                        let mut wait_until: Option<Instant> = None;
-                        let next_wait = match waits.get(&host) {
-                            Some(old) => {
-                                wait_until = Some(*old);
-                                *old + Duration::from_millis(
+                    let mut wait_until: Option<Instant> = None;
+                    let next_wait = match waits.get(&host) {
+                        Some(old) => {
+                            wait_until = Some(*old);
+                            *old + Duration::from_millis(
+                                config.optional.throttle.unwrap_or_default().into(),
+                            )
+                        }
+                        None => {
+                            Instant::now()
+                                + Duration::from_millis(
                                     config.optional.throttle.unwrap_or_default().into(),
                                 )
-                            }
-                            None => {
-                                Instant::now()
-                                    + Duration::from_millis(
-                                        config.optional.throttle.unwrap_or_default().into(),
-                                    )
-                            }
-                        };
-                        waits.insert(host, next_wait);
-                        drop(waits);
-
-                        if let Some(deadline) = wait_until {
-                            sleep_until(deadline).await;
                         }
+                    };
+                    waits.insert(host, next_wait);
+                    drop(waits);
+
+                    if let Some(deadline) = wait_until {
+                        sleep_until(deadline).await;
                     }
                 }
 
