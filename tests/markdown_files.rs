@@ -1,3 +1,11 @@
+/*
+ * SPDX-FileCopyrightText: 2019 - 2020 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2020 Alex Melville <Melvillian@users.noreply.github.com>
+ * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 use std::sync::Arc;
 
 use clap::ValueEnum;

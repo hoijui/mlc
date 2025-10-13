@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 - 2022 Armin Becher <becherarmin@methodpark.de>
+#
+# SPDX-License-Identifier: Unlicense
+
 FROM ubuntu:22.04
 
 RUN apt-get update; apt-get install -y ca-certificates; update-ca-certificates

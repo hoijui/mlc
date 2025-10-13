@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #[cfg(test)]
 #[macro_use]
 extern crate criterion;

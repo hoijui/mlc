@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Armin Becher <becherarmin@gmail.com>
+
+SPDX-License-Identifier: MIT
+-->
+
 ---
 name: Bug report
 about: Create a report to help us improve

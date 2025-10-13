@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2023 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 use async_std::fs;
 use async_std::path::PathBuf as AsyncPathBuf;
 use clap::ValueEnum;

@@ -1,3 +1,12 @@
+/*
+ * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2022 Gervasio Marchand <github@gervas.io>
+ * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ * SPDX-FileCopyrightText: 2023 Paul Hazen <paul-hazen@live.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 use clap::crate_authors;
 use clap::crate_description;
 use clap::crate_name;

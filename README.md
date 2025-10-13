@@ -1,3 +1,11 @@
+<!--
+SPDX-FileCopyrightText: 2019 - 2023 Armin Becher <becherarmin@gmail.com>
+SPDX-FileCopyrightText: 2023 Diego Rondini <diego.rondini@kynetics.com>
+SPDX-FileCopyrightText: 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+
+SPDX-License-Identifier: MIT
+-->
+
 # Markup Link Checker
 
 [![crates.io](https://img.shields.io/crates/v/mlc.svg?color=orange)](https://crates.io/crates/mlc)

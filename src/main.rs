@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2023 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 mod cli;
 mod logger;
 

@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #![warn(rust_2021_compatibility)]
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]

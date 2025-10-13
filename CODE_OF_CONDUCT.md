@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Armin Becher <becherarmin@gmail.com>
+
+SPDX-License-Identifier: MIT
+-->
+
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge

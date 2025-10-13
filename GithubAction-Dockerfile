@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 - 2022 Armin Becher <becherarmin@methodpark.de>
+#
+# SPDX-License-Identifier: Unlicense
+
 FROM becheran/mlc:0.16.3
 
 LABEL repository="https://github.com/becheran/mlc"

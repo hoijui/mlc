@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2020 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 use crate::link_validator::LinkCheckResult;
 use crate::Config;
 use async_std::fs::canonicalize;

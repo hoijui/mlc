@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2020 - 2021 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 use std::sync::LazyLock;
 
 use crate::link_validator::LinkCheckResult;

@@ -1,3 +1,11 @@
+<!--
+SPDX-FileCopyrightText: 2019 - 2023 Armin Becher <becherarmin@gmail.com>
+SPDX-FileCopyrightText: 2021 Alex Iribarren <alex.iribarren@gmail.com>
+SPDX-FileCopyrightText: 2023 Paul Hazen <paul-hazen@live.com>
+
+SPDX-License-Identifier: MIT
+-->
+
 <!-- The changelog shall follow the recommendations described here: https://keepachangelog.com/en/1.0.0/ 
 Types for Changes:
 - Added
