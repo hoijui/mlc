@@ -2,18 +2,17 @@ mod file_system;
 mod http;
 mod mail;
 
-pub mod link_type;
+use std::sync::LazyLock;
 
-use crate::link_extractors::link_extractor::MarkupLink;
 use crate::link_validator::file_system::check_filesystem;
 use crate::link_validator::http::check_http;
 use crate::Config;
 use colored::ColoredString;
 use colored::Colorize;
+use log::info;
 use mail::check_mail;
-
-pub use link_type::get_link_type;
-pub use link_type::LinkType;
+use mle::link::Link;
+use mle::link::Target;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum LinkCheckResult {
@@ -38,12 +37,10 @@ impl LinkCheckResult {
 
     #[must_use]
     pub fn status_code(&self) -> &'static ColoredString {
-        lazy_static! {
-            static ref CODE_OK: ColoredString = "OK".green();
-            static ref CODE_WARN: ColoredString = "Warn".yellow();
-            static ref CODE_SKIP: ColoredString = "Skip".green();
-            static ref CODE_ERR: ColoredString = "Err".red();
-        }
+        static CODE_OK: LazyLock<ColoredString> = LazyLock::new(|| "OK".green());
+        static CODE_WARN: LazyLock<ColoredString> = LazyLock::new(|| "Warn".yellow());
+        static CODE_SKIP: LazyLock<ColoredString> = LazyLock::new(|| "Skip".green());
+        static CODE_ERR: LazyLock<ColoredString> = LazyLock::new(|| "Err".red());
         match self {
             Self::Ok => &CODE_OK,
             Self::NotImplemented(_) | Self::Warning(_) => &CODE_WARN,
@@ -66,33 +63,30 @@ impl LinkCheckResult {
     }
 }
 
-pub async fn resolve_target_link(
-    link: &MarkupLink,
-    link_type: &LinkType,
-    config: &Config,
-) -> String {
-    if link_type == &LinkType::FileSystem {
-        file_system::resolve_target_link(&link.source, &link.target, config).await
+pub async fn resolve_target_link(link: &Link, config: &Config) -> Target {
+    if link.target.is_file_system() {
+        file_system::resolve_target_link(link, config).await
     } else {
-        link.target.to_string()
+        link.target.clone()
     }
 }
 
-pub async fn check(link_target: &str, link_type: &LinkType, config: &Config) -> LinkCheckResult {
+pub async fn check(link_target: &Target, config: &Config) -> LinkCheckResult {
     info!("Checking link '{}' ...", &link_target);
-    match link_type {
-        LinkType::Ftp | LinkType::UnknownUrlSchema => LinkCheckResult::NotImplemented(format!(
-            "Checking of link type '{:?}' is not implemented (yet).",
-            &link_type
+    match link_target {
+        Target::Ftp(..) | Target::UnknownUrlSchema(..) => LinkCheckResult::NotImplemented(format!(
+            "Checking of link type {link_target:#?} is not implemented (yet).",
         )),
-        LinkType::Mail => check_mail(link_target),
-        LinkType::Http => {
+        Target::EMail(url) => check_mail(url),
+        Target::Http(url) => {
             if config.optional.offline.unwrap_or_default() {
                 LinkCheckResult::Ignored("Ignore web link because of the offline flag.".to_string())
             } else {
-                check_http(link_target).await
+                check_http(url).await
             }
         }
-        LinkType::FileSystem => check_filesystem(link_target, config).await,
+        Target::FileSystem(fs_target) => check_filesystem(fs_target, config).await,
+        Target::FileUrl(..) => todo!(), // TODO
+        Target::Invalid(..) => todo!(), // TODO
     }
 }

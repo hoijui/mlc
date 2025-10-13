@@ -1,5 +1,4 @@
-extern crate simplelog;
-
+use log::debug;
 use serde::Deserialize;
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
@@ -24,6 +23,6 @@ pub fn init(log_level: &LogLevel) {
         TerminalMode::Stderr,
         ColorChoice::Auto,
     )]);
-    assert!(err.is_ok(), "Failed to init logger! Error: {:?}", err);
+    assert!(err.is_ok(), "Failed to init logger! Error: {err:?}");
     debug!("Initialized logging");
 }

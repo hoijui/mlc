@@ -2,7 +2,7 @@
 name = "mlc"
 version = "0.17.1"
 authors = ["Armin Becher <becherarmin@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "The markup link checker (mlc) checks for broken links in markup files."
 categories = ["command-line-utilities", "development-tools::testing", "text-processing"]
 keywords = ["link-checker", "broken", "markup", "html", "markdown"]
@@ -17,27 +17,28 @@ is-it-maintained-issue-resolution = { repository = "becheran/mlc" }
 
 [dependencies]
 async-std = "1.12"
+async-walkdir = "2.1"
 clap = { version = "4.0", features = ["cargo"] }
-colored = "2.1"
+colored = "3.0"
 const_format = "0.2"
 futures = "0.3"
 git-version = "0.3"
-lazy_static = "1.4"
 log = "0.4"
-pulldown-cmark = "0.9"
+# mle = { path = "../mle" }
+mle = "0.27"
+pulldown-cmark = "0.13"
 regex = "1.10"
-reqwest = { version = "0.11", features = ["native-tls-vendored", "brotli", "gzip", "deflate"] }
+reqwest = { version = "0.12", features = ["rustls-tls", "brotli", "gzip", "deflate"] }
 serde = { version = "1.0", features = ["derive"] }
 simplelog = "0.12"
-tokio = { version = "1.21", features = ["rt-multi-thread", "macros", "time"] }
-toml = "0.8"
-url = "2.2"
+tokio = { version = "1.46", features = ["rt-multi-thread", "macros", "time"] }
+toml = "0.9"
+url = "2.5"
 url-escape = "0.1"
-walkdir = "2.3"
-wildmatch = "2.1"
+wildmatch = "2.4"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.7"
 ntest = "0.9"
 
 [[bench]]

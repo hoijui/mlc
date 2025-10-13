@@ -1,14 +1,13 @@
-#[macro_use]
-extern crate log;
+mod cli;
+mod logger;
 
-use mlc::cli;
-use mlc::logger;
+use log::info;
 use std::process;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = cli::parse_args();
-    let log_level = match config.optional.debug {
+    let config = cli::parse_args().await?;
+    let log_level = match config.optional().debug {
         Some(true) => logger::LogLevel::Debug,
         _ => logger::LogLevel::Warn,
     };

@@ -1,38 +1,74 @@
-#[cfg(test)]
-use mlc::file_traversal;
-use mlc::markup::{MarkupFile, MarkupType};
+use async_std::fs;
+use async_std::path::PathBuf as AsyncPathBuf;
+use clap::ValueEnum;
 use mlc::Config;
 use mlc::OptionalConfig;
+#[cfg(test)]
+use mle::file_traversal;
+use mle::markup::{File as MarkupFile, Type as MarkupType};
 use std::path::Path;
 
-#[test]
-fn find_markdown_files() {
+#[tokio::test]
+async fn find_markdown_files() -> Result<(), file_traversal::Error> {
     let path = Path::new("./benches/benchmark/markdown/md_file_endings").to_path_buf();
-    let config: Config = Config {
-        directory: path,
-        optional: OptionalConfig {
+    let config = Config::new(
+        path.clone().into(),
+        mle::Config {
+            files_and_dirs: vec![path.clone().into()],
+            recursive: true,
+            links: Some(None),
+            anchors: Some(None),
+            ignore_paths: vec![],
+            ignore_links: vec![],
+            markup_types: MarkupType::value_variants().to_vec(),
+            result_format: mle::result::Type::Markdown,
+            result_extended: true,
+            result_flush: true,
+        },
+        OptionalConfig {
             markup_types: Some(vec![MarkupType::Markdown]),
             ..Default::default()
         },
-    };
+    )
+    .await
+    .unwrap();
     let mut result: Vec<MarkupFile> = Vec::new();
 
-    file_traversal::find(&config, &mut result);
+    file_traversal::find(&config.extractor_cfg(), &mut result).await?;
     assert_eq!(result.len(), 12);
+    Ok(())
 }
 
-#[test]
-fn empty_folder() {
-    let path = Path::new("./benches/benchmark/markdown/empty").to_path_buf();
-    let config: Config = Config {
-        directory: path,
-        optional: OptionalConfig {
+#[tokio::test]
+async fn empty_folder() -> Result<(), file_traversal::Error> {
+    let path = AsyncPathBuf::from("./target/empty");
+    if !path.exists().await {
+        fs::create_dir(&path).await.unwrap();
+    }
+    let config = Config::new(
+        path.clone().into(),
+        mle::Config {
+            files_and_dirs: vec![path.clone().into()],
+            recursive: true,
+            links: Some(None),
+            anchors: Some(None),
+            ignore_paths: vec![],
+            ignore_links: vec![],
+            markup_types: MarkupType::value_variants().to_vec(),
+            result_format: mle::result::Type::Markdown,
+            result_extended: true,
+            result_flush: true,
+        },
+        OptionalConfig {
             markup_types: Some(vec![MarkupType::Markdown]),
             ..Default::default()
         },
-    };
+    )
+    .await
+    .unwrap();
     let mut result: Vec<MarkupFile> = Vec::new();
 
-    file_traversal::find(&config, &mut result);
+    file_traversal::find(&config.extractor_cfg(), &mut result).await?;
     assert!(result.is_empty());
+    Ok(())
 }

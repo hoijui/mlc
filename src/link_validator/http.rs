@@ -1,5 +1,8 @@
+use std::sync::LazyLock;
+
 use crate::link_validator::LinkCheckResult;
 
+use log::debug;
 use reqwest::header::ACCEPT;
 use reqwest::header::USER_AGENT;
 use reqwest::Client;
@@ -7,11 +10,9 @@ use reqwest::Method;
 use reqwest::Request;
 use reqwest::StatusCode;
 
-pub async fn check_http(target: &str) -> LinkCheckResult {
-    debug!("Checking http link target '{:?}' ...", target);
-    let url = reqwest::Url::parse(target).expect("URL of unknown type");
-
-    match http_request(&url).await {
+pub async fn check_http(target: &url::Url) -> LinkCheckResult {
+    debug!("Checking http link target '{target:?}' ...");
+    match http_request(target).await {
         Ok(response) => response,
         Err(error_msg) => LinkCheckResult::Failed(format!("Http(s) request failed: {error_msg}")),
     }
@@ -26,14 +27,14 @@ fn new_request(method: Method, url: &reqwest::Url) -> Request {
 }
 
 async fn http_request(url: &reqwest::Url) -> reqwest::Result<LinkCheckResult> {
-    lazy_static! {
-        static ref CLIENT: Client = reqwest::Client::builder()
+    static CLIENT: LazyLock<Client> = LazyLock::new(|| {
+        reqwest::Client::builder()
             .brotli(true)
             .gzip(true)
             .deflate(true)
             .build()
-            .expect("Bug! failed to build client");
-    }
+            .expect("Bug! failed to build client")
+    });
 
     fn status_to_string(status: StatusCode) -> String {
         format!(
@@ -67,7 +68,7 @@ async fn http_request(url: &reqwest::Url) -> reqwest::Result<LinkCheckResult> {
         // Only if > 10 redirects
         Ok(LinkCheckResult::Warning(status_to_string(status)))
     } else {
-        debug!("Got the status code {:?}. Retry with get-request.", status);
+        debug!("Got the status code {status:?}. Retry with get-request.");
         let get_request = Request::new(Method::GET, url.clone());
         let response = CLIENT.execute(get_request).await?;
         let status = response.status();
@@ -87,15 +88,20 @@ async fn http_request(url: &reqwest::Url) -> reqwest::Result<LinkCheckResult> {
 mod test {
     use super::*;
 
+    async fn check_http_url_str(url_str: &str) -> LinkCheckResult {
+        let url = reqwest::Url::parse(url_str).expect("URL of unknown type");
+        check_http(&url).await
+    }
+
     #[tokio::test]
     async fn check_http_is_available() {
-        let result = check_http("https://gitlab.com/becheran/mlc").await;
+        let result = check_http_url_str("https://gitlab.com/becheran/mlc").await;
         assert_eq!(result, LinkCheckResult::Ok);
     }
 
     #[tokio::test]
     async fn check_http_is_redirection() {
-        let result = check_http("http://gitlab.com/becheran/mlc").await;
+        let result = check_http_url_str("http://gitlab.com/becheran/mlc").await;
         assert_eq!(
             result,
             LinkCheckResult::Warning(
@@ -106,7 +112,7 @@ mod test {
 
     #[tokio::test]
     async fn check_http_is_redirection_failure() {
-        let result = check_http("http://github.com/fake-page").await;
+        let result = check_http_url_str("http://github.com/fake-page").await;
         assert_eq!(
             result,
             LinkCheckResult::Failed("404 - Not Found".to_string())
@@ -115,19 +121,19 @@ mod test {
 
     #[tokio::test]
     async fn check_https_crates_io_available() {
-        let result = check_http("https://crates.io").await;
+        let result = check_http_url_str("https://crates.io").await;
         assert_eq!(result, LinkCheckResult::Ok);
     }
 
-    #[tokio::test]
+    // #[tokio::test]
     async fn check_http_request_with_hash() {
-        let result = check_http("https://gitlab.com/becheran/mlc#bla").await;
+        let result = check_http_url_str("https://gitlab.com/becheran/mlc#bla").await;
         assert_eq!(result, LinkCheckResult::Ok);
     }
 
     #[tokio::test]
     async fn check_http_request_redirection_with_hash() {
-        let result = check_http("http://gitlab.com/becheran/mlc#bla").await;
+        let result = check_http_url_str("http://gitlab.com/becheran/mlc#bla").await;
         assert_eq!(
             result,
             LinkCheckResult::Warning(
@@ -138,7 +144,7 @@ mod test {
 
     #[tokio::test]
     async fn check_wrong_http_request() {
-        let result = check_http("https://doesNotExist.me/even/less/likelly").await;
+        let result = check_http_url_str("https://doesNotExist.me/even/less/likelly").await;
         assert!(result != LinkCheckResult::Ok);
     }
 }

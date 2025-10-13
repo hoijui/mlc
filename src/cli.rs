@@ -1,17 +1,22 @@
+use clap::crate_authors;
+use clap::crate_description;
+use clap::crate_name;
 // use crate::ignore_path;
-use crate::ignore_path::IgnorePath;
-use crate::markup::MarkupType;
-use crate::Config;
-use crate::OptionalConfig;
 use clap::Arg;
 use clap::ArgAction;
 use clap::Command;
+use clap::ValueEnum;
 use const_format::formatcp;
+use mlc::Config;
+use mlc::OptionalConfig;
+use mle::ignore_path::IgnorePath;
+use mle::markup::Type as MarkupType;
+use mle::path_buf::PathBuf;
 use std::convert::TryFrom;
 use std::fs;
-use std::path::Path;
 use std::path::MAIN_SEPARATOR;
 use std::path::MAIN_SEPARATOR_STR;
+use wildmatch::WildMatch;
 
 const CONFIG_FILE_PATH: &str = "./.mlc.toml";
 
@@ -47,16 +52,16 @@ fn print_version_and_exit(quiet: bool) {
     if !quiet {
         print!("{} ", clap::crate_name!());
     }
-    println!("{}", crate::VERSION);
+    println!("{}", mlc::VERSION);
     std::process::exit(0);
 }
 
 #[must_use]
-pub fn parse_args() -> Config {
+pub async fn parse_args() -> Result<Config, String> {
     let mut opt: OptionalConfig = match fs::read_to_string(CONFIG_FILE_PATH) {
         Ok(content) => match toml::from_str(&content) {
             Ok(o) => o,
-            Err(err) => panic!("Invalid TOML file {:?}", err),
+            Err(err) => panic!("Invalid TOML file {err:?}"),
         },
         Err(_) => OptionalConfig::default(),
     };
@@ -137,21 +142,44 @@ pub fn parse_args() -> Config {
                 .required(false)
         )
         .arg(
+            Arg::new("timeout")
+                .long("timeout")
+                .num_args(1)
+                .value_name("DELAY_MS")
+                .help("Wait for HTTP request response for a maximum of milliseconds")
+                .required(false)
+        )
+        .arg(
             Arg::new("root-dir")
                 .long("root-dir")
                 .short('r')
                 .num_args(1)
                 .value_name("DIR")
                 .help("Path to the root folder used to resolve all relative paths")
+                .default_value(".")
                 .required(false)
         )
         .arg(arg_quiet())
         .arg(arg_version())
-        .version(crate::VERSION)
+        .version(mlc::VERSION)
         .disable_version_flag(true)
         .author(crate_authors!())
         .about(crate_description!())
         .get_matches();
+
+    let mut extractor_cfg = mle::config::Config {
+        files_and_dirs: vec![],
+        recursive: true,
+        links: Some(None),
+        anchors: Some(None),
+        ignore_paths: vec![],
+        ignore_links: vec![],
+        markup_types: MarkupType::value_variants().to_vec(),
+        result_format: mle::result::Type::Markdown,
+        result_extended: true,
+        result_flush: true,
+        // ..Default::default()
+    };
 
     let quiet = matches.get_flag(A_L_QUIET);
     let version = matches.get_flag(A_L_VERSION);
@@ -163,10 +191,12 @@ pub fn parse_args() -> Config {
     let dir_string = matches
         .get_one::<String>("directory")
         .unwrap_or(&default_dir);
-    let directory = dir_string
+    let directory: PathBuf = dir_string
         .replace(['/', '\\'], MAIN_SEPARATOR_STR)
         .parse()
         .expect("failed to parse path");
+
+    extractor_cfg.files_and_dirs.push(directory.clone());
 
     if matches.get_flag("debug") {
         opt.debug = Some(true);
@@ -197,29 +227,36 @@ pub fn parse_args() -> Config {
     }
 
     if let Some(ignore_links) = matches.get_many::<String>("ignore-links") {
-        opt.ignore_links = Some(ignore_links.map(ToString::to_string).collect());
+        // opt.ignore_links = Some(ignore_links.map(ToString::to_string).collect());
+        extractor_cfg.ignore_links = ignore_links.map(|glob| WildMatch::new(glob)).collect();
     }
 
     if let Some(ignore_path) = matches.get_many::<String>("ignore-path") {
-        opt.ignore_paths = Some(
-            ignore_path
-                .map(IgnorePath::try_from)
-                .collect::<Result<Vec<IgnorePath>, _>>()
-                .unwrap(),
-        );
+        // opt.ignore_paths = Some(
+        //     ignore_path
+        //         .map(IgnorePath::try_from)
+        //         .collect::<Result<Vec<IgnorePath>, _>>()
+        //         .unwrap(),
+        // );
+        extractor_cfg.ignore_paths = ignore_path
+            .map(|pattern| IgnorePath::try_from(pattern.as_str()))
+            .collect::<Result<Vec<IgnorePath>, _>>()
+            .unwrap();
     }
 
     if let Some(root_dir) = matches.get_one::<String>("root-dir") {
-        let root_path = Path::new(&root_dir.replace(['/', '\\'], MAIN_SEPARATOR_STR)).to_path_buf();
-        if !root_path.is_dir() {
+        let root_path = PathBuf::from(
+            root_dir
+                .replace(['/', '\\'], MAIN_SEPARATOR_STR)
+                .as_str()
+                .into(),
+        );
+        if !root_path.is_dir().await {
             eprintln!("Root path '{root_path:?}' must be a directory!");
             std::process::exit(1);
         }
         opt.root_dir = Some(root_path);
     }
 
-    Config {
-        directory,
-        optional: opt,
-    }
+    Config::new(directory, extractor_cfg, opt).await
 }

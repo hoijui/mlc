@@ -19,7 +19,7 @@
 #![allow(clippy::default_trait_access)]
 // NOTE allowed because:
 //      If the same regex is going to be applied to multiple inputs,
-//      the precomputations done by Regex construction
+//      the pre-computations done by Regex construction
 //      can give significantly better performance
 //      than any of the `str`-based methods.
 #![allow(clippy::trivial_regex)]
@@ -27,41 +27,30 @@
 #![allow(clippy::fn_params_excessive_bools)]
 #![allow(clippy::cast_precision_loss)]
 
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate lazy_static;
-
-use crate::link_extractors::link_extractor::MarkupLink;
-use crate::link_validator::link_type::get_link_type;
-use crate::link_validator::link_type::LinkType;
 use crate::link_validator::resolve_target_link;
-use crate::markup::MarkupFile;
+use async_std::fs::canonicalize;
+pub use colored::*;
+use futures::{stream, StreamExt};
+use git_version::git_version;
+use link_validator::LinkCheckResult;
+use log::info;
+use mle::ignore_path::IgnorePath;
+use mle::link::Link;
+use mle::link::Locator;
+use mle::link::Target;
+use mle::markup;
+use mle::path_buf::PathBuf;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
-use std::path::PathBuf;
+use std::fmt::Write;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::{sleep_until, Duration, Instant};
-pub mod cli;
-pub mod file_traversal;
-pub mod ignore_path;
-pub mod link_extractors;
-pub mod link_validator;
-pub mod logger;
-pub mod markup;
-pub use colored::*;
 pub use wildmatch::WildMatch;
 
-use futures::{stream, StreamExt};
-use git_version::git_version;
-use ignore_path::IgnorePath;
-use link_validator::LinkCheckResult;
-use url::Url;
+pub mod link_validator;
 
 pub const VERSION: &str = git_version!(cargo_prefix = "", fallback = "unknown");
 
@@ -71,24 +60,91 @@ const PARALLEL_REQUESTS: usize = 20;
 pub struct OptionalConfig {
     pub debug: Option<bool>,
     #[serde(rename(deserialize = "markup-types"))]
-    pub markup_types: Option<Vec<markup::MarkupType>>,
+    pub markup_types: Option<Vec<markup::Type>>,
     pub offline: Option<bool>,
     #[serde(rename(deserialize = "match-file-extension"))]
     pub match_file_extension: Option<bool>,
     #[serde(rename(deserialize = "ignore-links"))]
     pub ignore_links: Option<Vec<String>>,
     #[serde(rename(deserialize = "ignore-path"))]
-    // TODO maybe rename to the plural version as well?
     pub ignore_paths: Option<Vec<IgnorePath>>,
     #[serde(rename(deserialize = "root-dir"))]
     pub root_dir: Option<PathBuf>,
     pub throttle: Option<u32>,
 }
 
+impl OptionalConfig {
+    async fn canonicalize_root_dir(&mut self) -> Result<(), String> {
+        if let Some(root_dir) = self.root_dir.as_ref() {
+            match canonicalize(root_dir.as_path()).await {
+                Ok(new_root) => {
+                    self.root_dir = Some(new_root.into());
+                }
+                Err(err) => return Err(format!(
+                    "Root path could not be converted to an absolute path. Does the directory exit? - '{err}'"
+                )),
+            }
+        }
+        Ok(())
+    }
+    // pub fn root_dir(&self) -> std::io::Result<async_std::path::PathBuf> {
+    //     Ok(if let Some(root_dir) = self.root_dir {
+    //         Cow::Borrowed(async_std::path::PathBuf::into(root_dir))
+    //     } else {
+    //         Cow::Owned(env::current_dir()?.into())
+    //     })
+    // }
+    pub async fn eval_rel_path_base(&mut self) -> std::io::Result<PathBuf> {
+        self.canonicalize_root_dir()
+            .await
+            .map_err(std::io::Error::other)?;
+        Ok(if let Some(root_dir) = self.root_dir.clone() {
+            root_dir
+        } else {
+            env::current_dir()?.into()
+        })
+    }
+}
+
 #[derive(Default, Debug, Deserialize)]
 pub struct Config {
-    pub directory: PathBuf,
-    pub optional: OptionalConfig,
+    pub(crate) directory: PathBuf,
+    pub(crate) extractor_cfg: mle::Config,
+    pub(crate) optional: OptionalConfig,
+    #[serde(skip)]
+    pub(crate) rel_path_base: PathBuf,
+}
+
+impl Config {
+    pub async fn new(
+        directory: PathBuf,
+        extractor_cfg: mle::Config,
+        mut optional: OptionalConfig,
+    ) -> Result<Self, String> {
+        optional.canonicalize_root_dir().await?;
+        let rel_path_base = optional
+            .eval_rel_path_base()
+            .await
+            .map_err(|err| err.to_string())?;
+        Ok(Self {
+            directory,
+            extractor_cfg,
+            optional,
+            rel_path_base,
+        })
+    }
+
+    pub fn directory(&self) -> &PathBuf {
+        &self.directory
+    }
+
+    pub fn extractor_cfg(&self) -> &mle::Config {
+        &self.extractor_cfg
+    }
+
+    pub fn optional(&self) -> &OptionalConfig {
+        &self.optional
+    }
 }
 
 impl fmt::Display for Config {
@@ -98,11 +154,11 @@ impl fmt::Display for Config {
             None => vec![],
         };
         let root_dir_str = match &self.optional.root_dir {
-            Some(p) => p.to_str().unwrap_or(""),
+            Some(path) => path.as_os_str().to_str().unwrap_or(""),
             None => "",
         };
         let ignore_path_str: Vec<String> = match &self.optional.ignore_paths {
-            Some(p) => p.iter().map(|m| m.to_str().unwrap().to_string()).collect(),
+            Some(p) => p.iter().map(ToString::to_string).collect(),
             None => vec![],
         };
         let markup_types_str: Vec<String> = match &self.optional.markup_types {
@@ -122,7 +178,7 @@ IgnoreLinks: {}
 IgnorePaths: {:?}
 Throttle: {} ms",
             self.optional.debug.unwrap_or(false),
-            self.directory.to_str().unwrap_or_default(),
+            self.directory.as_os_str().to_str().unwrap_or_default(),
             markup_types_str,
             self.optional.offline.unwrap_or_default(),
             self.optional.match_file_extension.unwrap_or_default(),
@@ -140,31 +196,36 @@ struct FinalResult {
     result_code: LinkCheckResult,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
-struct Target {
-    target: String,
-    link_type: LinkType,
-}
+// #[derive(Hash, PartialEq, Eq, Clone, Debug)]
+// struct Target {
+//     target: String,
+//     link_type: LinkType,
+// }
 
-fn find_all_links(config: &Config) -> Vec<MarkupLink> {
-    let mut files: Vec<MarkupFile> = Vec::new();
-    file_traversal::find(config, &mut files);
-    let mut links = vec![];
-    for file in files {
-        links.append(&mut link_extractors::link_extractor::find_links(&file));
-    }
+async fn find_all_links(config: &Config) -> Vec<Link> {
+    // let mle_state = mle::state::State::new(config.extractor_cfg);
+    let (links, anchors, errors) = mle::find_all_links(&config.extractor_cfg).await;
+    // mle_state.
+    // let mut files: Vec<MarkupFile> = Vec::new();
+    // file_traversal::find(config, &mut files);
+    // let mut links = vec![];
+    // for file in files {
+    //     links.append(&mut mle::extractors::find_links(&file, config)?.links);
+    // }
     links
 }
 
-fn print_helper(
-    link: &MarkupLink,
+// fn print_link(link: &Link, status_code: &colored::ColoredString, msg: &str, error_channel: bool) {
+fn print_link(
+    target: &Target,
+    source: &Locator,
     status_code: &colored::ColoredString,
     msg: &str,
     error_channel: bool,
 ) {
     let link_str = format!(
         "[{:^4}] {} ({}, {}) => {} - {}",
-        status_code, link.source, link.line, link.column, link.target, msg
+        status_code, source.file, source.pos.line, source.pos.column, target, msg
     );
     if error_channel {
         eprintln!("{link_str}");
@@ -173,104 +234,122 @@ fn print_helper(
     }
 }
 
-fn print_result(result: &FinalResult, map: &HashMap<Target, Vec<MarkupLink>>) {
-    for link in &map[&result.target] {
+fn debug_print_link(target: &Target, source: &Locator, msg: &str) {
+    println!(
+        "::warning file={},line={},col={},title=link checker warning::{}. {}",
+        source.file, source.pos.line, source.pos.column, target, msg
+    );
+}
+
+fn print_result(result: &FinalResult, links: &HashMap<Target, Vec<Locator>>) {
+    for locator in &links[&result.target] {
         let code = &result.result_code;
-        print_helper(link, code.status_code(), code.msg(), code.has_issue());
+        print_link(
+            &result.target,
+            locator,
+            code.status_code(),
+            code.msg(),
+            code.has_issue(),
+        );
     }
 }
 
-pub async fn run(config: &Config) -> Result<(), ()> {
-    let links = find_all_links(config);
-    let mut link_target_groups: HashMap<Target, Vec<MarkupLink>> = HashMap::new();
+pub async fn run(config: &Config) -> Result<(), String> {
+    let links = find_all_links(config).await;
+    // This groups all links that have the same target **file/location**,
+    // disregarding the anker/fragment.
+    let mut link_target_groups: HashMap<Target, Vec<Locator>> = HashMap::new();
 
-    let mut skipped = 0;
+    // let mut skipped = 0;
 
-    let ignore_links = config
-        .optional
-        .ignore_links
-        .as_ref()
-        .map_or_else(Vec::new, |s| s.iter().map(|m| WildMatch::new(m)).collect());
-    for link in &links {
-        if ignore_links.iter().any(|m| m.matches(&link.target)) {
-            print_helper(
-                link,
-                &"Skip".green(),
-                "Ignore link because of ignore-links option.",
-                false,
-            );
-            skipped += 1;
-            continue;
-        }
-        let link_type = get_link_type(&link.target);
-        let target = resolve_target_link(link, &link_type, config).await;
-        let t = Target { target, link_type };
-        match link_target_groups.get_mut(&t) {
-            Some(v) => v.push(link.clone()),
-            None => {
-                link_target_groups.insert(t, vec![link.clone()]);
-            }
-        }
+    // let ignore_links = config
+    //     .optional
+    //     .ignore_links
+    //     .as_ref()
+    //     .map_or_else(Vec::new, |s| s.iter().map(|m| WildMatch::new(m)).collect());
+    for link in links {
+        // if ignore_links.iter().any(|m| m.matches(&link.target.)) {
+        //     print_helper(
+        //         link,
+        //         &"Skip".green(),
+        //         "Ignore link because of ignore-links option.",
+        //         false,
+        //     );
+        //     skipped += 1;
+        //     continue;
+        // }
+        let target = resolve_target_link(&link, config).await;
+        link_target_groups
+            .entry(target)
+            .or_default()
+            .push(link.source);
+        // match link_target_groups.get_mut(&t) {
+        //     Some(v) => v.push(link.clone()),
+        //     None => {
+        //         link_target_groups.insert(t, vec![link.clone()]);
+        //     }
+        // }
     }
 
     let throttle = config.optional.throttle.unwrap_or_default() > 0;
-    info!("Throttle HTTP requests to same host: {:?}", throttle);
+    info!("Throttle HTTP requests to same host: {throttle:?}");
     let waits = Arc::new(Mutex::new(HashMap::new()));
     // See also http://patshaughnessy.net/2020/1/20/downloading-100000-files-using-async-rust
     let mut buffered_stream = stream::iter(link_target_groups.keys())
         .map(|target| {
             let waits = waits.clone();
             async move {
-                if throttle && target.link_type == LinkType::Http {
-                    let parsed = match Url::parse(&target.target) {
-                        Ok(parsed) => parsed,
-                        Err(error) => {
-                            return FinalResult {
-                                target: target.clone(),
-                                result_code: LinkCheckResult::Failed(format!(
-                                    "Could not parse URL type. Err: {error:?}"
-                                )),
+                if throttle {
+                    if let Target::Http(target_url) = target {
+                        // let parsed = match Url::parse(target_url) {
+                        //     Ok(parsed) => parsed,
+                        //     Err(error) => {
+                        //         return FinalResult {
+                        //             target: target.clone(),
+                        //             result_code: LinkCheckResult::Failed(format!(
+                        //                 "Could not parse URL type. Err: {error:?}"
+                        //             )),
+                        //         }
+                        //     }
+                        // };
+                        let host = match target_url.host_str() {
+                            Some(host) => host.to_string(),
+                            None => {
+                                return FinalResult {
+                                    target: target.clone(),
+                                    result_code: LinkCheckResult::Failed(
+                                        "Failed to determine host".to_string(),
+                                    ),
+                                }
                             }
-                        }
-                    };
-                    let host = match parsed.host_str() {
-                        Some(host) => host.to_string(),
-                        None => {
-                            return FinalResult {
-                                target: target.clone(),
-                                result_code: LinkCheckResult::Failed(
-                                    "Failed to determine host".to_string(),
-                                ),
-                            }
-                        }
-                    };
-                    let mut waits = waits.lock().await;
+                        };
+                        let mut waits = waits.lock().await;
 
-                    let mut wait_until: Option<Instant> = None;
-                    let next_wait = match waits.get(&host) {
-                        Some(old) => {
-                            wait_until = Some(*old);
-                            *old + Duration::from_millis(
-                                config.optional.throttle.unwrap_or_default().into(),
-                            )
-                        }
-                        None => {
-                            Instant::now()
-                                + Duration::from_millis(
+                        let mut wait_until: Option<Instant> = None;
+                        let next_wait = match waits.get(&host) {
+                            Some(old) => {
+                                wait_until = Some(*old);
+                                *old + Duration::from_millis(
                                     config.optional.throttle.unwrap_or_default().into(),
                                 )
-                        }
-                    };
-                    waits.insert(host, next_wait);
-                    drop(waits);
+                            }
+                            None => {
+                                Instant::now()
+                                    + Duration::from_millis(
+                                        config.optional.throttle.unwrap_or_default().into(),
+                                    )
+                            }
+                        };
+                        waits.insert(host, next_wait);
+                        drop(waits);
 
-                    if let Some(deadline) = wait_until {
-                        sleep_until(deadline).await;
+                        if let Some(deadline) = wait_until {
+                            sleep_until(deadline).await;
+                        }
                     }
                 }
 
-                let result_code =
-                    link_validator::check(&target.target, &target.link_type, config).await;
+                let result_code = link_validator::check(target, config).await;
 
                 FinalResult {
                     target: target.clone(),
@@ -281,6 +360,7 @@ pub async fn run(config: &Config) -> Result<(), ()> {
         .buffer_unordered(PARALLEL_REQUESTS);
 
     let mut oks = 0;
+    let mut skipped = 0;
     let mut warnings = 0;
     let mut errors = vec![];
 
@@ -298,11 +378,8 @@ pub async fn run(config: &Config) -> Result<(), ()> {
             LinkCheckResult::NotImplemented(msg) | LinkCheckResult::Warning(msg) => {
                 warnings += link_target_groups[&result.target].len();
                 if is_github_runner_env {
-                    for link in &link_target_groups[&result.target] {
-                        println!(
-                            "::warning file={},line={},col={},title=link checker warning::{}. {}",
-                            link.source, link.line, link.column, result.target.target, msg
-                        );
+                    for source in &link_target_groups[&result.target] {
+                        debug_print_link(&result.target, source, msg);
                     }
                 }
             }
@@ -312,11 +389,8 @@ pub async fn run(config: &Config) -> Result<(), ()> {
             LinkCheckResult::Failed(msg) => {
                 errors.push(result.clone());
                 if is_github_runner_env {
-                    for link in &link_target_groups[&result.target] {
-                        println!(
-                            "::error file={},line={},col={},title=broken link::{}. {}",
-                            link.source, link.line, link.column, result.target.target, msg
-                        );
+                    for source in &link_target_groups[&result.target] {
+                        debug_print_link(&result.target, source, msg);
                     }
                 }
             }
@@ -344,15 +418,16 @@ pub async fn run(config: &Config) -> Result<(), ()> {
     if errors.is_empty() {
         Ok(())
     } else {
-        println!();
-        println!("The following links could not be resolved:");
-        println!();
+        let mut error_msg = String::new();
+        writeln!(error_msg).unwrap();
+        writeln!(error_msg, "The following links could not be resolved:").unwrap();
+        writeln!(error_msg).unwrap();
         for res in errors {
-            for link in &link_target_groups[&res.target] {
-                println!("{}", link.source_str());
+            for source in &link_target_groups[&res.target] {
+                writeln!(error_msg, "{source}").unwrap();
             }
         }
-        println!();
-        Err(())
+        writeln!(error_msg).unwrap();
+        Err(error_msg)
     }
 }
