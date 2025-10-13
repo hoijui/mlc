@@ -70,9 +70,10 @@ impl LinkCheckResult {
     }
 }
 
-pub async fn resolve_target_link(link: &Link, config: &Config) -> Target {
+#[must_use]
+pub fn resolve_target_link(link: &Link, config: &Config) -> Target {
     if link.target.is_file_system() {
-        file_system::resolve_target_link(link, config).await
+        file_system::resolve_target_link(link, config)
     } else {
         link.target.clone()
     }

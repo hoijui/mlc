@@ -52,7 +52,7 @@ pub async fn check_filesystem(target: &FileSystemTarget, config: &Config) -> Lin
                     match file_on_system.file_name() {
                         Some(file_name) => {
                             if target_file_name == file_name {
-                                info!("Found file {file_on_system:?}");
+                                info!("Found file {}", file_on_system.display());
                                 return LinkCheckResult::Ok;
                             }
                         }
@@ -65,7 +65,7 @@ pub async fn check_filesystem(target: &FileSystemTarget, config: &Config) -> Lin
     LinkCheckResult::Failed("Target filename not found.".to_string())
 }
 
-pub async fn resolve_target_link(link: &Link, config: &Config) -> mle::link::Target {
+pub fn resolve_target_link(link: &Link, config: &Config) -> mle::link::Target {
     if let Some(anchor) = link.target.fragment() {
         warn!(
             "Strip everything after #. The chapter (aka anchor aka fragment) part '{anchor}' is not checked.",

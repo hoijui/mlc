@@ -65,7 +65,6 @@ fn print_version_and_exit(quiet: bool) {
     std::process::exit(0);
 }
 
-#[must_use]
 pub async fn parse_args() -> Result<Config, String> {
     let mut opt: OptionalConfig = match fs::read_to_string(CONFIG_FILE_PATH) {
         Ok(content) => match toml::from_str(&content) {

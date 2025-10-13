@@ -5,35 +5,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-#![warn(rust_2021_compatibility)]
-#![deny(clippy::all)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
-#![warn(clippy::cargo)]
-#![warn(clippy::wildcard_enum_match_arm)]
-//#![warn(clippy::string_slice)]
-//#![warn(clippy::indexing_slicing)]
-#![warn(clippy::clone_on_ref_ptr)]
-#![warn(clippy::try_err)]
-// #![warn(clippy::shadow_reuse)]
-//#![warn(clippy::empty_structs_with_brackets)]
-#![allow(clippy::else_if_without_else)]
-#![allow(clippy::option_if_let_else)]
-#![allow(clippy::clone_on_ref_ptr)]
-#![warn(clippy::use_debug)]
-//#![warn(clippy::print_stdout)]
-//#![warn(clippy::print_stderr)]
-#![allow(clippy::default_trait_access)]
-// NOTE allowed because:
-//      If the same regex is going to be applied to multiple inputs,
-//      the pre-computations done by Regex construction
-//      can give significantly better performance
-//      than any of the `str`-based methods.
-#![allow(clippy::trivial_regex)]
-#![allow(clippy::struct_excessive_bools)]
-#![allow(clippy::fn_params_excessive_bools)]
-#![allow(clippy::cast_precision_loss)]
-
 use crate::link_validator::resolve_target_link;
 use async_std::fs::canonicalize;
 pub use colored::*;
@@ -143,14 +114,17 @@ impl Config {
         })
     }
 
-    pub fn directory(&self) -> &PathBuf {
+    #[must_use]
+    pub const fn directory(&self) -> &PathBuf {
         &self.directory
     }
 
+    #[must_use]
     pub fn extractor_cfg(&self) -> &mle::Config {
         &self.extractor_cfg
     }
 
+    #[must_use]
     pub fn optional(&self) -> &OptionalConfig {
         &self.optional
     }
@@ -287,7 +261,7 @@ pub async fn run(config: &Config) -> Result<(), String> {
         //     skipped += 1;
         //     continue;
         // }
-        let target = resolve_target_link(&link, config).await;
+        let target = resolve_target_link(&link, config);
         link_target_groups
             .entry(target)
             .or_default()

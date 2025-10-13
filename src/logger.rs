@@ -17,7 +17,7 @@ pub enum LogLevel {
     Debug,
 }
 
-pub fn init(log_level: &LogLevel) {
+pub fn init(log_level: LogLevel) {
     let level_filter = match log_level {
         LogLevel::Info => LevelFilter::Info,
         LogLevel::Warn => LevelFilter::Warn,

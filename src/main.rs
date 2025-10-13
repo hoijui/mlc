@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(true) => logger::LogLevel::Debug,
         _ => logger::LogLevel::Warn,
     };
-    logger::init(&log_level);
+    logger::init(log_level);
     info!("Config: {}", &config);
     if mlc::run(&config).await.is_err() {
         process::exit(1);
