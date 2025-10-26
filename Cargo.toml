@@ -60,17 +60,18 @@ async-walkdir = "2.1"
 clap = { version = "4.0", features = ["cargo"] }
 colored = "3.0"
 const_format = "0.2"
+fern = "0.7"
 futures = "0.3"
 git-version = "0.3"
 log = "0.4"
 # mle = { path = "../mle" }
 mle = "0.27"
 pulldown-cmark = "0.13"
-regex = "1.10"
-reqwest = { version = "0.12", features = ["rustls-tls", "brotli", "gzip", "deflate"] }
+regex = "1.12"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "brotli", "gzip", "deflate"] }
 serde = { version = "1.0", features = ["derive"] }
 simplelog = "0.12"
-tokio = { version = "1.46", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1.48", features = ["rt-multi-thread", "macros", "time"] }
 toml = "0.9"
 url = "2.5"
 url-escape = "0.1"
@@ -78,6 +79,7 @@ wildmatch = "2.4"
 
 [dev-dependencies]
 criterion = "0.7"
+mockito = "1.6"
 ntest = "0.9"
 
 [[bench]]

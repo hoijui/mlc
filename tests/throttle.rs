@@ -22,7 +22,7 @@ const THROTTLED_TIME_MS: u64 = (TEST_THROTTLE_MS as u64) * ((TEST_URLS as u64) -
 async fn throttle_different_hosts() {
     let test_file = benches_dir().join("throttle").join("different_host.md");
     let config = Config::new(
-        test_file.clone().into(),
+        test_file.clone(),
         mle::Config {
             files_and_dirs: vec![test_file.clone().into()],
             recursive: true,
@@ -53,7 +53,7 @@ async fn throttle_different_hosts() {
 async fn throttle_same_hosts() {
     let test_file = benches_dir().join("throttle").join("same_host.md");
     let config = Config::new(
-        test_file.clone().into(),
+        test_file.clone(),
         mle::Config {
             files_and_dirs: vec![test_file.clone().into()],
             recursive: true,
@@ -85,7 +85,7 @@ async fn throttle_same_hosts() {
 async fn throttle_same_ip() {
     let test_file = benches_dir().join("throttle").join("same_ip.md");
     let config = Config::new(
-        test_file.clone().into(),
+        test_file.clone(),
         mle::Config {
             files_and_dirs: vec![test_file.clone().into()],
             recursive: true,

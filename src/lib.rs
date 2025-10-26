@@ -1,16 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2019 - 2024 Armin Becher <becherarmin@gmail.com>
  * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
  *
  * SPDX-License-Identifier: MIT
  */
 
-use crate::link_validator::resolve_target_link;
 use async_std::fs::canonicalize;
-pub use colored::*;
-use futures::{StreamExt, stream};
-use git_version::git_version;
-use link_validator::LinkCheckResult;
 use log::info;
 use mle::ignore_path::IgnorePath;
 use mle::link::Link;
@@ -18,12 +13,21 @@ use mle::link::Locator;
 use mle::link::Target;
 use mle::markup;
 use mle::path_buf::PathBuf;
+use std::fmt::Write;
+use crate::link_validator::resolve_target_link;
+use futures::{StreamExt, stream};
+use link_validator::LinkCheckResult;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
-use std::fmt::Write;
+use std::fs;
+use std::path::Path;
+pub use colored::*;
+use git_version::git_version;
+use std::process::Command;
 use std::sync::Arc;
+use std::vec;
 use tokio::sync::Mutex;
 use tokio::time::{Duration, Instant, sleep_until};
 pub use wildmatch::WildMatch;
@@ -37,6 +41,8 @@ const PARALLEL_REQUESTS: usize = 20;
 #[derive(Default, Debug, Deserialize)]
 pub struct OptionalConfig {
     pub debug: Option<bool>,
+    #[serde(rename(deserialize = "do-not-warn-for-redirect-to"))]
+    pub do_not_warn_for_redirect_to: Option<Vec<WildMatch>>,
     #[serde(rename(deserialize = "markup-types"))]
     pub markup_types: Option<Vec<markup::Type>>,
     pub offline: Option<bool>,
@@ -48,6 +54,12 @@ pub struct OptionalConfig {
     pub ignore_paths: Option<Vec<IgnorePath>>,
     #[serde(rename(deserialize = "root-dir"))]
     pub root_dir: Option<PathBuf>,
+    #[serde(rename(deserialize = "csv"))]
+    pub csv_file: Option<PathBuf>,
+    #[serde(rename(deserialize = "git-ignore"))]
+    pub git_ignore: Option<bool>,
+    #[serde(rename(deserialize = "git-untracked"))]
+    pub git_untracked: Option<bool>,
     pub throttle: Option<u32>,
 }
 
@@ -97,7 +109,7 @@ pub struct Config {
 
 impl Config {
     pub async fn new(
-        directory: PathBuf,
+        directory: impl Into<PathBuf>,
         extractor_cfg: mle::Config,
         mut optional: OptionalConfig,
     ) -> Result<Self, String> {
@@ -107,7 +119,7 @@ impl Config {
             .await
             .map_err(|err| err.to_string())?;
         Ok(Self {
-            directory,
+            directory: directory.into(),
             extractor_cfg,
             optional,
             rel_path_base,
@@ -141,34 +153,47 @@ impl fmt::Display for Config {
             None => "",
         };
         let ignore_path_str: Vec<String> = match &self.optional.ignore_paths {
-            Some(p) => p.iter().map(ToString::to_string).collect(),
+            Some(paths) => paths.iter().map(ToString::to_string).collect(),
             None => vec![],
         };
+        let csv_file_str: Option<String> = self
+            .optional
+            .csv_file
+            .as_ref()
+            .map(|path| path.display().to_string());
         let markup_types_str: Vec<String> = match &self.optional.markup_types {
-            Some(p) => p.iter().map(|m| format!("{m:?}")).collect(),
+            Some(types) => types.iter().map(|m| format!("{m:?}")).collect(),
             None => vec![],
         };
         write!(
             f,
             "
 Debug: {:?}
-Dir: {} 
-Types: {:?} 
+Dir: {}
+DoNotWarnForRedirectTo: {:?}
+Types: {:?}
 Offline: {}
 MatchExt: {}
 RootDir: {}
-IgnoreLinks: {} 
+git_ignore: {}
+git_untracked: {}
+IgnoreLinks: {}
 IgnorePaths: {:?}
-Throttle: {} ms",
+Throttle: {} ms
+CSVFile: {:?}",
             self.optional.debug.unwrap_or(false),
             self.directory.as_os_str().to_str().unwrap_or_default(),
+            self.optional.do_not_warn_for_redirect_to,
             markup_types_str,
             self.optional.offline.unwrap_or_default(),
             self.optional.match_file_extension.unwrap_or_default(),
             root_dir_str,
+            self.optional.git_ignore.unwrap_or_default(),
+            self.optional.git_untracked.unwrap_or_default(),
             ignore_str.join(","),
             ignore_path_str,
-            self.optional.throttle.unwrap_or(0)
+            self.optional.throttle.unwrap_or(0),
+            csv_file_str
         )
     }
 }
@@ -196,6 +221,68 @@ async fn find_all_links(config: &Config) -> Vec<Link> {
     //     links.append(&mut mle::extractors::find_links(&file, config)?.links);
     // }
     links
+}
+
+fn find_git_ignored_files() -> Option<Vec<PathBuf>> {
+    let output = Command::new("git")
+        .arg("ls-files")
+        .arg("--ignored")
+        .arg("--others")
+        .arg("--exclude-standard")
+        .output()
+        .expect("Failed to execute 'git' command");
+
+    if output.status.success() {
+        let ignored_files = String::from_utf8(output.stdout)
+            .expect("Invalid UTF-8 sequence")
+            .lines()
+            .filter(|line| {
+                std::path::Path::new(line).extension().is_some_and(|ext| {
+                    ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("html")
+                })
+            })
+            .filter_map(|line| fs::canonicalize(Path::new(line.trim())).ok())
+            .map(Into::into)
+            .collect::<Vec<_>>();
+        Some(ignored_files)
+    } else {
+        eprintln!(
+            "git ls-files command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        None
+    }
+}
+
+fn find_git_untracked_files() -> Option<Vec<PathBuf>> {
+    let output = Command::new("git")
+        .arg("ls-files")
+        .arg("--others")
+        .arg("--exclude-standard")
+        .output()
+        .expect("Failed to execute 'git' command");
+
+    if output.status.success() {
+        // TODO de-duplicate with last function
+        let ignored_files = String::from_utf8(output.stdout)
+            .expect("Invalid UTF-8 sequence")
+            .lines()
+            .filter(|line| {
+                std::path::Path::new(line).extension().is_some_and(|ext| {
+                    ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("html")
+                })
+            })
+            .filter_map(|line| fs::canonicalize(Path::new(line.trim())).ok())
+            .map(Into::into)
+            .collect::<Vec<_>>();
+        Some(ignored_files)
+    } else {
+        eprintln!(
+            "git ls-files command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        None
+    }
 }
 
 // fn print_link(link: &Link, status_code: &colored::ColoredString, msg: &str, error_channel: bool) {
@@ -227,6 +314,20 @@ fn debug_print_link(target: &Target, source: &Locator, msg: &str) {
 fn print_result(result: &FinalResult, links: &HashMap<Target, Vec<Locator>>) {
     for locator in &links[&result.target] {
         let code = &result.result_code;
+        //match &result.result_code {
+        //    LinkCheckResult::Ok => {
+        //        print_helper(link, &"OK".green(), "", false);
+        //    }
+        //    LinkCheckResult::NotImplemented(msg) | LinkCheckResult::Warning(msg) => {
+        //        print_helper(link, &"Warn".yellow(), msg, false);
+        //    }
+        //    LinkCheckResult::Ignored(msg) => {
+        //        print_helper(link, &"Skip".green(), msg, false);
+        //    }
+        //    LinkCheckResult::Failed(msg) => {
+        //        print_helper(link, &"Err".red(), msg, true);
+        //    }
+        //}
         print_link(
             &result.target,
             locator,
@@ -245,12 +346,82 @@ pub async fn run(config: &Config) -> Result<(), String> {
 
     // let mut skipped = 0;
 
+    // TODO include this? Maybe not, because it is already in mle (is it/should it be?)
     // let ignore_links = config
     //     .optional
     //     .ignore_links
     //     .as_ref()
     //     .map_or_else(Vec::new, |s| s.iter().map(|m| WildMatch::new(m)).collect());
+
+    // TODO uncomment this, but move it to mle?
+    //let git_ignored_files: Option<Vec<PathBuf>> = if config.optional.git_ignore.is_some() {
+    //    let files = find_git_ignored_files();
+    //    debug!("Found git_ignored files: {files:?}");
+    //    files
+    //} else {
+    //    None
+    //};
+    //let is_git_ignore_enabled = git_ignored_files.is_some();
+
+    // TODO uncomment this, but move it to mle?
+    //let git_untracked_files: Option<Vec<PathBuf>> = if config.optional.git_untracked.is_some() {
+    //    let files = find_git_untracked_files();
+    //    debug!("Found git_untracked files: {files:?}");
+    //    files
+    //} else {
+    //    None
+    //};
+    //let is_git_untracked_enabled = git_untracked_files.is_some();
+
+    //let mut broken_references: Vec<BrokenExtractedLink> = vec![];
     for link in links {
+        // match link {
+        //     Ok(link) => {
+        //let canonical_link_source = match fs::canonicalize(&link.source) {
+        //    Ok(path) => path,
+        //    Err(e) => {
+        //        warn!(
+        //            "Failed to canonicalize link source: {}. Error: {:?}",
+        //            link.source, e
+        //        );
+        //        continue;
+        //    }
+        //};
+
+        // TODO uncomment this, but move it to mle?
+        //if is_git_ignore_enabled {
+        //    if let Some(ref gif) = git_ignored_files {
+        //        if gif.iter().any(|path| path == &canonical_link_source) {
+        //            print_helper(
+        //                link,
+        //                &"Skip".green(),
+        //                "Ignore link because it is ignored by git.",
+        //                false,
+        //            );
+        //            skipped += 1;
+        //            continue;
+        //        }
+        //    }
+        //}
+
+        // TODO uncomment this, but move it to mle?
+        //if is_git_untracked_enabled {
+        //    if let Some(ref gif) = git_untracked_files {
+        //        if gif.iter().any(|path| path == &canonical_link_source) {
+        //            print_helper(
+        //                link,
+        //                &"Skip".green(),
+        //                "Ignore link because it is untracked by git.",
+        //                false,
+        //            );
+        //            skipped += 1;
+        //            continue;
+        //        }
+        //    }
+        //}
+        // }
+
+        // TODO include this? Maybe not, because it is already in mle (is it/should it be?)
         // if ignore_links.iter().any(|m| m.matches(&link.target.)) {
         //     print_helper(
         //         link,
@@ -261,6 +432,7 @@ pub async fn run(config: &Config) -> Result<(), String> {
         //     skipped += 1;
         //     continue;
         // }
+
         let target = resolve_target_link(&link, config);
         link_target_groups
             .entry(target)
@@ -271,6 +443,10 @@ pub async fn run(config: &Config) -> Result<(), String> {
         //     None => {
         //         link_target_groups.insert(t, vec![link.clone()]);
         //     }
+        // }
+        //Err(broken_reference) => {
+        //    broken_references.push(broken_reference.clone());
+        //}
         // }
     }
 

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Unlicense
 
-FROM becheran/mlc:0.16.3
+FROM becheran/mlc:1.0.0
 
 LABEL repository="https://github.com/becheran/mlc"
 

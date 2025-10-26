@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2019 - 2021 Armin Becher <becherarmin@gmail.com>
+SPDX-FileCopyrightText: 2019 - 2024 Armin Becher <becherarmin@gmail.com>
 
 SPDX-License-Identifier: MIT
 -->
@@ -24,4 +24,4 @@ Some text to show that the reference links can follow later.
 
 [arbitrary case-insensitive reference text]: https://www.mozilla.org
 [1]: http://slashdot.org
-[link text itself]: http://www.reddit.com
+[link text itself]: https://www.google.com

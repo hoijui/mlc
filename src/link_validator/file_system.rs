@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2020 - 2024 Armin Becher <becherarmin@gmail.com>
  * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
  *
  * SPDX-License-Identifier: MIT
@@ -26,7 +26,7 @@ pub async fn check_filesystem(target: &FileSystemTarget, config: &Config) -> Lin
         .into_owned();
     debug!("Absolute target path: '{target:?}'");
     if target.exists().await {
-        return LinkCheckResult::Ok;
+        LinkCheckResult::Ok
     } else if !config.optional.match_file_extension.unwrap_or_default()
         && target.extension().is_none()
     {
@@ -56,13 +56,21 @@ pub async fn check_filesystem(target: &FileSystemTarget, config: &Config) -> Lin
                                 return LinkCheckResult::Ok;
                             }
                         }
-                        None => break,
+                        None => {
+                            return LinkCheckResult::Failed(
+                                "Target filename not found.".to_string(),
+                            );
+                        }
                     }
                 }
             }
+            LinkCheckResult::Failed("Target not found.".to_string())
+        } else {
+            LinkCheckResult::Failed("Target not found.".to_string())
         }
+    } else {
+        LinkCheckResult::Failed("Target filename not found.".to_string())
     }
-    LinkCheckResult::Failed("Target filename not found.".to_string())
 }
 
 pub fn resolve_target_link(link: &Link, config: &Config) -> mle::link::Target {
@@ -109,6 +117,11 @@ pub fn resolve_target_link(link: &Link, config: &Config) -> mle::link::Target {
                 }
             };
             debug!("Checking file system link target '{:?}' ...", link.target);
+            // let abs_path = absolute_target_path(abs_path, &link.target)
+            //     .await
+            //     .to_str()
+            //     .expect("Could not resolve target path")
+            //     .to_string();
             // Remove verbatim path identifier which causes trouble on windows when using ../../ in paths
             let abs_path = abs_path
                 .strip_prefix(r"\\?\")

@@ -19,7 +19,7 @@ use std::path::Path;
 async fn find_markdown_files() -> Result<(), file_traversal::Error> {
     let path = Path::new("./benches/benchmark/markdown/md_file_endings").to_path_buf();
     let config = Config::new(
-        path.clone().into(),
+        path.clone(),
         mle::Config {
             files_and_dirs: vec![path.clone().into()],
             recursive: true,
@@ -53,7 +53,7 @@ async fn empty_folder() -> Result<(), file_traversal::Error> {
         fs::create_dir(&path).await.unwrap();
     }
     let config = Config::new(
-        path.clone().into(),
+        path.clone(),
         mle::Config {
             files_and_dirs: vec![path.clone().into()],
             recursive: true,

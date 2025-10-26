@@ -25,6 +25,7 @@ use std::convert::TryFrom;
 use std::fs;
 use std::path::MAIN_SEPARATOR;
 use std::path::MAIN_SEPARATOR_STR;
+use std::path::Path;
 use wildmatch::WildMatch;
 
 const CONFIG_FILE_PATH: &str = "./.mlc.toml";
@@ -98,6 +99,15 @@ pub async fn parse_args() -> Result<Config, String> {
                 .required(false),
         )
         .arg(
+            Arg::new("do-not-warn-for-redirect-to")
+                .long("do-not-warn-for-redirect-to")
+                .value_name("URL")
+                .value_delimiter(',')
+                .action(ArgAction::Append)
+                .help("Comma separated list of links which will be ignored")
+                .required(false),
+        )
+        .arg(
             Arg::new("match-file-extension")
                 .long("match-file-extension")
                 .short('e')
@@ -167,6 +177,29 @@ pub async fn parse_args() -> Result<Config, String> {
                 .default_value(".")
                 .required(false)
         )
+        .arg(
+            Arg::new("git-ignore")
+                .long("git-ignore")
+                .short('g')
+                .help("Ignore all files ignored by git")
+                .action(ArgAction::SetTrue)
+                .required(false),
+        )
+        .arg(
+            Arg::new("csv")
+                .long("csv")
+                .value_name("CSV_FILE")
+                .help("set the output file for the CSV report")
+                .required(false),
+        )
+        .arg(
+            Arg::new("git-untracked")
+                .long("git-untracked")
+                .short('u')
+                .help("Ignore all files untracked by git")
+                .action(ArgAction::SetTrue)
+                .required(false),
+        )
         .arg(arg_quiet())
         .arg(arg_version())
         .version(mlc::VERSION)
@@ -210,9 +243,27 @@ pub async fn parse_args() -> Result<Config, String> {
         opt.debug = Some(true);
     }
 
+    if let Some(do_not_warn_for_redirect_to) =
+        matches.get_many::<String>("do-not-warn-for-redirect-to")
+    {
+        opt.do_not_warn_for_redirect_to = Some(
+            do_not_warn_for_redirect_to
+                .map(|x| WildMatch::new(x))
+                .collect(),
+        );
+    }
+
     if let Some(throttle_str) = matches.get_one::<String>("throttle") {
         let throttle = throttle_str.parse::<u32>().unwrap();
         opt.throttle = Some(throttle);
+    }
+
+    if let Some(f) = matches.get_one::<String>("csv") {
+        opt.csv_file = Some(
+            Path::new(&f.replace(['/', '\\'], std::path::MAIN_SEPARATOR_STR))
+                .to_path_buf()
+                .into(),
+        );
     }
 
     if let Some(markup_types) = matches.get_many::<String>("markup-types") {
@@ -250,6 +301,14 @@ pub async fn parse_args() -> Result<Config, String> {
             .map(|pattern| IgnorePath::try_from(pattern.as_str()))
             .collect::<Result<Vec<IgnorePath>, _>>()
             .unwrap();
+    }
+
+    if matches.get_flag("git-ignore") {
+        opt.git_ignore = Some(true);
+    }
+
+    if matches.get_flag("git-untracked") {
+        opt.git_untracked = Some(true);
     }
 
     if let Some(root_dir) = matches.get_one::<String>("root-dir") {

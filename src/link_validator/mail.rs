@@ -1,15 +1,14 @@
 /*
- * SPDX-FileCopyrightText: 2020 - 2021 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2020 - 2024 Armin Becher <becherarmin@gmail.com>
  * SPDX-FileCopyrightText: 2025 Robin Vobruba <hoijui.quaero@gmail.com>
  *
  * SPDX-License-Identifier: MIT
  */
 
-use std::sync::LazyLock;
-
 use crate::link_validator::LinkCheckResult;
 use log::debug;
 use regex::Regex;
+use std::sync::LazyLock;
 use url::Url;
 
 static EMAIL_USER_REGEX: LazyLock<Regex> =

@@ -8,15 +8,35 @@
 mod cli;
 mod logger;
 
+use clap::crate_version;
 use log::info;
 use std::process;
 
+fn print_header() {
+    let width = 60;
+    let header = format!("markup link checker - mlc v{:}", crate_version!());
+    println!();
+    println!("{:+<1$}", "", width);
+    print!("+");
+    print!("{: <1$}", "", width - 2);
+    println!("+");
+    print!("+");
+    print!("{: ^1$}", header, width - 2);
+    println!("+");
+    print!("+");
+    print!("{: <1$}", "", width - 2);
+    println!("+");
+    println!("{:+<1$}", "", width);
+    println!();
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    print_header();
     let config = cli::parse_args().await?;
     let log_level = match config.optional().debug {
-        Some(true) => logger::LogLevel::Debug,
-        _ => logger::LogLevel::Warn,
+        Some(true) => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Warn,
     };
     logger::init(log_level);
     info!("Config: {}", &config);

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
+ * SPDX-FileCopyrightText: 2019 - 2024 Armin Becher <becherarmin@gmail.com>
  * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
  *
  * SPDX-License-Identifier: MIT
@@ -14,12 +14,13 @@ use std::sync::LazyLock;
 use crate::Config;
 use crate::link_validator::file_system::check_filesystem;
 use crate::link_validator::http::check_http;
-use colored::ColoredString;
-use colored::Colorize;
 use log::info;
 use mail::check_mail;
+use mle::ColoredString;
 use mle::link::Link;
 use mle::link::Target;
+use mle::Colorize;
+use wildmatch::WildMatch;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum LinkCheckResult {
@@ -42,6 +43,10 @@ impl LinkCheckResult {
         }
     }
 
+    /**
+     * Returns a status code like "OK", "Warn" or "Err",
+     * combined with shell escapes for coloring it.
+     */
     #[must_use]
     pub fn status_code(&self) -> &'static ColoredString {
         static CODE_OK: LazyLock<ColoredString> = LazyLock::new(|| "OK".green());
@@ -79,18 +84,33 @@ pub fn resolve_target_link(link: &Link, config: &Config) -> Target {
     }
 }
 
+const EMPTY_VEC: Vec<WildMatch> = vec![];
+
 pub async fn check(link_target: &Target, config: &Config) -> LinkCheckResult {
-    info!("Checking link '{}' ...", &link_target);
+    info!("Check link {}.", &link_target);
     match link_target {
-        Target::Ftp(..) | Target::UnknownUrlSchema(..) => LinkCheckResult::NotImplemented(format!(
-            "Checking of link type {link_target:#?} is not implemented (yet).",
+        Target::Ftp(url) => LinkCheckResult::NotImplemented(format!(
+            "Link type for '{url}' (FTP) is not supported yet and cannot be checked.",
+        )),
+        Target::UnknownUrlSchema(url) => LinkCheckResult::NotImplemented(format!(
+            "Link type '{url}' (unknown) is not implemented yet and cannot be checked."
         )),
         Target::EMail(url) => check_mail(url),
         Target::Http(url) => {
             if config.optional.offline.unwrap_or_default() {
-                LinkCheckResult::Ignored("Ignore web link because of the offline flag.".to_string())
+                LinkCheckResult::Ignored(
+                    "Ignore web (HTTP) link, because of the offline flag.".to_string(),
+                )
             } else {
-                check_http(url).await
+                check_http(
+                    url,
+                    config
+                        .optional()
+                        .do_not_warn_for_redirect_to
+                        .as_ref()
+                        .unwrap_or(&EMPTY_VEC),
+                )
+                .await
             }
         }
         Target::FileSystem(fs_target) => check_filesystem(fs_target, config).await,

@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
- * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ * SPDX-FileCopyrightText: 2023 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
  *
  * SPDX-License-Identifier: MIT
  */
@@ -40,7 +40,7 @@ async fn end_to_end_benchmark() {
     )
     .await
     .unwrap();
-    let _ = mlc::run(&config);
+    mlc::run(&config).await.unwrap();
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
