@@ -7,66 +7,124 @@
  * SPDX-License-Identifier: MIT
  */
 
-use clap::crate_authors;
-use clap::crate_description;
-use clap::crate_name;
-// use crate::ignore_path;
 use clap::Arg;
 use clap::ArgAction;
+use clap::ArgGroup;
 use clap::Command;
-use clap::ValueEnum;
-use const_format::formatcp;
+use clap::command;
+use cli_utils::path_buf::PathBuf;
 use mlc::Config;
 use mlc::OptionalConfig;
-use mle::ignore_path::IgnorePath;
+use mle::BoxResult;
 use mle::markup::Type as MarkupType;
-use mle::path_buf::PathBuf;
-use std::convert::TryFrom;
 use std::fs;
-use std::path::MAIN_SEPARATOR;
 use std::path::MAIN_SEPARATOR_STR;
 use std::path::Path;
+use std::str::FromStr;
+use std::sync::LazyLock;
 use wildmatch::WildMatch;
 
 const CONFIG_FILE_PATH: &str = "./.mlc.toml";
 
-const A_L_VERSION: &str = "version";
-const A_S_VERSION: char = 'V';
-const A_S_QUIET: char = 'q';
-const A_L_QUIET: &str = "quiet";
+pub const A_L_DEBUG: &str = "debug";
+pub const A_S_DEBUG: char = 'd';
+pub const A_L_OFFLINE: &str = "offline";
+pub const A_S_OFFLINE: char = 'o';
+pub const A_L_NO_REDIRECT_WARN: &str = "do-not-warn-for-redirect-to";
+pub const A_L_THROTTLE: &str = "throttle";
+pub const A_S_THROTTLE: char = 'T';
+pub const A_L_TIMEOUT: &str = "timeout";
+pub const A_L_ROOT_DIR: &str = "root-dir";
+pub const A_S_ROOT_DIR: char = 'r';
 
-fn arg_version() -> Arg {
-    Arg::new(A_L_VERSION)
-        .help(formatcp!(
-            "Print version information and exit. \
-May be combined with -{A_S_QUIET},--{A_L_QUIET}, \
-to really only output the version string."
-        ))
-        .short(A_S_VERSION)
-        .long(A_L_VERSION)
+pub fn arg_debug() -> Arg {
+    Arg::new(A_L_DEBUG)
+        .long(A_L_DEBUG)
+        .short(A_S_DEBUG)
+        .help("Print debug information to console")
         .action(ArgAction::SetTrue)
 }
 
-fn arg_quiet() -> Arg {
-    Arg::new(A_L_QUIET)
-        .help("Minimize or suppress output to stdout")
-        .long_help("Minimize or suppress output to stdout, and only shows log output on stderr.")
+pub fn arg_offline() -> Arg {
+    Arg::new(A_L_OFFLINE)
+        .long(A_L_OFFLINE)
+        .short(A_S_OFFLINE)
+        .help("Do not check web links")
         .action(ArgAction::SetTrue)
-        .short(A_S_QUIET)
-        .long(A_L_QUIET)
 }
 
-fn print_version_and_exit(quiet: bool) {
-    #![allow(clippy::print_stdout)]
-
-    if !quiet {
-        print!("{} ", clap::crate_name!());
-    }
-    println!("{}", mlc::VERSION);
-    std::process::exit(0);
+pub fn arg_no_redirect_warn() -> Arg {
+    Arg::new(A_L_NO_REDIRECT_WARN)
+        .long(A_L_NO_REDIRECT_WARN)
+        .value_name("URL")
+        .value_delimiter(',')
+        .action(ArgAction::Append)
+        .help("Comma separated list of links for which redirection will be ignored")
 }
 
-pub async fn parse_args() -> Result<Config, String> {
+pub fn arg_throttle() -> Arg {
+    Arg::new(A_L_THROTTLE)
+        .long(A_L_THROTTLE)
+        .short(A_S_THROTTLE)
+        .num_args(1)
+        .value_name("DELAY_MS")
+        .help("Wait between http request to the same host for a defined number of milliseconds")
+}
+
+pub fn arg_timeout() -> Arg {
+    Arg::new(A_L_TIMEOUT)
+        .long(A_L_TIMEOUT)
+        .num_args(1)
+        .value_name("DELAY_MS")
+        .help("Wait for HTTP request response for a maximum of milliseconds")
+}
+
+pub fn arg_root_dir() -> Arg {
+    Arg::new(A_L_ROOT_DIR)
+        .long(A_L_ROOT_DIR)
+        .short(A_S_ROOT_DIR)
+        .num_args(1)
+        .value_name("DIR")
+        .help("Path to the root folder used to resolve all relative paths")
+    // .default_value(".")
+}
+
+static ARGS: LazyLock<[Arg; 12]> = LazyLock::new(|| {
+    [
+        mle::cli::arg_version(),
+        mle::cli::arg_quiet(),
+        arg_debug(),
+        arg_offline(),
+        arg_no_redirect_warn(),
+        arg_throttle(),
+        arg_timeout(),
+        arg_root_dir(),
+        mle::cli::arg_markup_files(),
+        mle::cli::arg_markup_files_list(),
+        mle::cli::arg_ignore_links(),
+        mle::cli::arg_result_format(),
+    ]
+});
+
+fn arg_matcher() -> Command {
+    let duplicate_short_options = mle::cli::find_duplicate_short_options();
+    assert!(
+        duplicate_short_options.is_empty(),
+        "Duplicate argument short options: {duplicate_short_options:?}",
+    );
+    command!()
+        .bin_name(clap::crate_name!())
+        .help_expected(true)
+        .disable_version_flag(true)
+        .args(ARGS.iter())
+        .group(
+            ArgGroup::new("markup-files")
+                .args([mle::cli::A_N_MARKUP_FILES, mle::cli::A_L_MARKUP_FILES_LIST])
+                .required(true),
+        )
+}
+
+pub async fn parse_args() -> BoxResult<Config> {
     let mut opt: OptionalConfig = match fs::read_to_string(CONFIG_FILE_PATH) {
         Ok(content) => match toml::from_str(&content) {
             Ok(o) => o,
@@ -75,177 +133,33 @@ pub async fn parse_args() -> Result<Config, String> {
         Err(_) => OptionalConfig::default(),
     };
 
-    let matches = Command::new(crate_name!())
-        .arg(
-            Arg::new("directory")
-                .help("Check all links in given directory and subdirectories")
-                .required(false)
-                .index(1),
-        )
-        .arg(
-            Arg::new("debug")
-                .long("debug")
-                .short('d')
-                .help("Print debug information to console")
-                .action(ArgAction::SetTrue)
-                .required(false),
-        )
-        .arg(
-            Arg::new("offline")
-                .long("offline")
-                .short('o')
-                .help("Do not check web links")
-                .action(ArgAction::SetTrue)
-                .required(false),
-        )
-        .arg(
-            Arg::new("do-not-warn-for-redirect-to")
-                .long("do-not-warn-for-redirect-to")
-                .value_name("URL")
-                .value_delimiter(',')
-                .action(ArgAction::Append)
-                .help("Comma separated list of links which will be ignored")
-                .required(false),
-        )
-        .arg(
-            Arg::new("match-file-extension")
-                .long("match-file-extension")
-                .short('e')
-                .help("Do check for the exact file extension when searching for a file")
-                .action(ArgAction::SetTrue)
-                .required(false),
-        )
-        .arg(
-            Arg::new("ignore-path")
-                .long("ignore-path")
-                .short('p')
-                .help("List of files and directories which will not be checked; space separated")
-                .long_help("One or more files or directories which will not be checked, separated by white-space.")
-                .value_name("PATHS")
-                .value_delimiter(',')
-                .action(ArgAction::Append)
-                // .value_parser(ignore_path::is_valid_string)
-                .required(false)
-        )
-        .arg(
-            Arg::new("ignore-links")
-                .long("ignore-links")
-                .short('i')
-                .help("List of links which will not be checked; space separated")
-                .long_help("One or more wildcard-patterns/globs, matching links which will not be checked, separated by white-space.")
-                .value_name("GLOBS")
-                .value_delimiter(',')
-                .action(ArgAction::Append)
-                .required(false)
-        )
-        .arg(
-            Arg::new("markup-types")
-                .long("markup-types")
-                .short('t')
-                .value_name("TYPES")
-                .help("List of markup types which shall be checked; space separated")
-                .long_help("One or more markup file types which shall be checked, separated by white-space.")
-                .action(ArgAction::Append)
-                .value_delimiter(',')
-                .value_parser(["md", "html"])
-                .required(false)
-        )
-        .arg(
-            Arg::new("throttle")
-                .long("throttle")
-                .short('T')
-                .num_args(1)
-                .value_name("DELAY_MS")
-                .help("Wait between http request to the same host for a defined number of milliseconds")
-                .required(false)
-        )
-        .arg(
-            Arg::new("timeout")
-                .long("timeout")
-                .num_args(1)
-                .value_name("DELAY_MS")
-                .help("Wait for HTTP request response for a maximum of milliseconds")
-                .required(false)
-        )
-        .arg(
-            Arg::new("root-dir")
-                .long("root-dir")
-                .short('r')
-                .num_args(1)
-                .value_name("DIR")
-                .help("Path to the root folder used to resolve all relative paths")
-                .default_value(".")
-                .required(false)
-        )
-        .arg(
-            Arg::new("git-ignore")
-                .long("git-ignore")
-                .short('g')
-                .help("Ignore all files ignored by git")
-                .action(ArgAction::SetTrue)
-                .required(false),
-        )
-        .arg(
-            Arg::new("csv")
-                .long("csv")
-                .value_name("CSV_FILE")
-                .help("set the output file for the CSV report")
-                .required(false),
-        )
-        .arg(
-            Arg::new("git-untracked")
-                .long("git-untracked")
-                .short('u')
-                .help("Ignore all files untracked by git")
-                .action(ArgAction::SetTrue)
-                .required(false),
-        )
-        .arg(arg_quiet())
-        .arg(arg_version())
-        .version(mlc::VERSION)
-        .disable_version_flag(true)
-        .author(crate_authors!())
-        .about(crate_description!())
-        .get_matches();
+    let matches = arg_matcher().get_matches();
 
-    let mut extractor_cfg = mle::config::Config {
-        files_and_dirs: vec![],
-        recursive: true,
-        links: Some(None),
-        anchors: Some(None),
-        ignore_paths: vec![],
-        ignore_links: vec![],
-        markup_types: MarkupType::value_variants().to_vec(),
-        result_format: mle::result::Type::Markdown,
-        result_extended: true,
-        result_flush: true,
-        // ..Default::default()
-    };
-
-    let quiet = matches.get_flag(A_L_QUIET);
-    let version = matches.get_flag(A_L_VERSION);
+    let quiet = matches.get_flag(mle::cli::A_L_QUIET);
+    let version = matches.get_flag(mle::cli::A_L_VERSION);
     if version {
-        print_version_and_exit(quiet);
+        mle::cli::print_version_and_exit(mlc::VERSION, quiet);
     }
 
-    let default_dir = format!(".{}", &MAIN_SEPARATOR);
-    let dir_string = matches
-        .get_one::<String>("directory")
-        .unwrap_or(&default_dir);
-    let directory: PathBuf = dir_string
-        .replace(['/', '\\'], MAIN_SEPARATOR_STR)
-        .parse()
-        .expect("failed to parse path");
+    let extractor_cfg = mle::cli::parse_args().await?;
+    // let mut extractor_cfg = mle::config::Config::default();
 
-    extractor_cfg.files_and_dirs.push(directory.clone());
+    // let default_dir = format!(".{}", &MAIN_SEPARATOR);
+    // let dir_string = matches
+    //     .get_one::<String>("directory")
+    //     .unwrap_or(&default_dir);
+    // let directory: PathBuf = dir_string
+    //     .replace(['/', '\\'], MAIN_SEPARATOR_STR)
+    //     .parse()
+    //     .expect("failed to parse path");
 
-    if matches.get_flag("debug") {
+    // extractor_cfg.files_and_dirs.push(directory.clone());
+
+    if matches.get_flag(A_L_DEBUG) {
         opt.debug = Some(true);
     }
 
-    if let Some(do_not_warn_for_redirect_to) =
-        matches.get_many::<String>("do-not-warn-for-redirect-to")
-    {
+    if let Some(do_not_warn_for_redirect_to) = matches.get_many::<String>(A_L_NO_REDIRECT_WARN) {
         opt.do_not_warn_for_redirect_to = Some(
             do_not_warn_for_redirect_to
                 .map(|x| WildMatch::new(x))
@@ -253,7 +167,7 @@ pub async fn parse_args() -> Result<Config, String> {
         );
     }
 
-    if let Some(throttle_str) = matches.get_one::<String>("throttle") {
+    if let Some(throttle_str) = matches.get_one::<String>(A_L_THROTTLE) {
         let throttle = throttle_str.parse::<u32>().unwrap();
         opt.throttle = Some(throttle);
     }
@@ -277,7 +191,7 @@ pub async fn parse_args() -> Result<Config, String> {
         opt.markup_types = Some(vec![MarkupType::Markdown, MarkupType::Html]);
     }
 
-    if matches.get_flag("offline") {
+    if matches.get_flag(A_L_OFFLINE) {
         opt.offline = Some(true);
     }
 
@@ -285,39 +199,15 @@ pub async fn parse_args() -> Result<Config, String> {
         opt.match_file_extension = Some(true);
     }
 
-    if let Some(ignore_links) = matches.get_many::<String>("ignore-links") {
-        // opt.ignore_links = Some(ignore_links.map(ToString::to_string).collect());
-        extractor_cfg.ignore_links = ignore_links.map(|glob| WildMatch::new(glob)).collect();
-    }
+    // if let Some(ignore_links) = matches.get_many::<String>("ignore-links") {
+    //     // opt.ignore_links = Some(ignore_links.map(ToString::to_string).collect());
+    //     extractor_cfg.ignore_links = ignore_links.map(|glob| WildMatch::new(glob)).collect();
+    // }
 
-    if let Some(ignore_path) = matches.get_many::<String>("ignore-path") {
-        // opt.ignore_paths = Some(
-        //     ignore_path
-        //         .map(IgnorePath::try_from)
-        //         .collect::<Result<Vec<IgnorePath>, _>>()
-        //         .unwrap(),
-        // );
-        extractor_cfg.ignore_paths = ignore_path
-            .map(|pattern| IgnorePath::try_from(pattern.as_str()))
-            .collect::<Result<Vec<IgnorePath>, _>>()
-            .unwrap();
-    }
-
-    if matches.get_flag("git-ignore") {
-        opt.git_ignore = Some(true);
-    }
-
-    if matches.get_flag("git-untracked") {
-        opt.git_untracked = Some(true);
-    }
-
-    if let Some(root_dir) = matches.get_one::<String>("root-dir") {
-        let root_path = PathBuf::from(
-            root_dir
-                .replace(['/', '\\'], MAIN_SEPARATOR_STR)
-                .as_str()
-                .into(),
-        );
+    if let Some(root_dir) = matches.get_one::<String>(A_L_ROOT_DIR) {
+        let root_path =
+            PathBuf::from_str(root_dir.replace(['/', '\\'], MAIN_SEPARATOR_STR).as_str())
+                .expect("Infallible");
         if !root_path.is_dir().await {
             eprintln!("Root path '{root_path:?}' must be a directory!");
             std::process::exit(1);
@@ -325,5 +215,5 @@ pub async fn parse_args() -> Result<Config, String> {
         opt.root_dir = Some(root_path);
     }
 
-    Config::new(directory, extractor_cfg, opt).await
+    Config::new(extractor_cfg, opt).await
 }

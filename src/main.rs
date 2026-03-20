@@ -10,6 +10,7 @@ mod logger;
 
 use clap::crate_version;
 use log::info;
+use mle::BoxResult;
 use std::process;
 
 fn print_header() {
@@ -31,14 +32,14 @@ fn print_header() {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> BoxResult<()> {
     print_header();
     let config = cli::parse_args().await?;
     let log_level = match config.optional().debug {
         Some(true) => log::LevelFilter::Debug,
         _ => log::LevelFilter::Warn,
     };
-    logger::init(log_level);
+    logger::init(log_level)?;
     info!("Config: {}", &config);
     if mlc::run(&config).await.is_err() {
         process::exit(1);

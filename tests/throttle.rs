@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod helper;
 
-use clap::ValueEnum;
+use cli_utils::StreamIdent;
 use helper::benches_dir;
 use mlc::{Config, OptionalConfig};
 use mle::markup::Type as MarkupType;
@@ -22,15 +22,11 @@ const THROTTLED_TIME_MS: u64 = (TEST_THROTTLE_MS as u64) * ((TEST_URLS as u64) -
 async fn throttle_different_hosts() {
     let test_file = benches_dir().join("throttle").join("different_host.md");
     let config = Config::new(
-        test_file.clone(),
         mle::Config {
-            files_and_dirs: vec![test_file.clone().into()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
+            markup_files: vec![test_file.clone().into()],
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
             ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
             result_format: mle::result::Type::Markdown,
             result_extended: true,
             result_flush: true,
@@ -46,22 +42,18 @@ async fn throttle_different_hosts() {
     let start = Instant::now();
     mlc::run(&config).await.unwrap_or(());
     let duration = start.elapsed();
-    assert!(duration < Duration::from_millis(THROTTLED_TIME_MS))
+    assert!(duration < Duration::from_millis(THROTTLED_TIME_MS));
 }
 
 #[tokio::test]
 async fn throttle_same_hosts() {
     let test_file = benches_dir().join("throttle").join("same_host.md");
     let config = Config::new(
-        test_file.clone(),
         mle::Config {
-            files_and_dirs: vec![test_file.clone().into()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
+            markup_files: vec![test_file.clone().into()],
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
             ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
             result_format: mle::result::Type::Markdown,
             result_extended: true,
             result_flush: true,
@@ -78,22 +70,18 @@ async fn throttle_same_hosts() {
     let start = Instant::now();
     mlc::run(&config).await.unwrap_or(());
     let duration = start.elapsed();
-    assert!(duration > Duration::from_millis(THROTTLED_TIME_MS))
+    assert!(duration > Duration::from_millis(THROTTLED_TIME_MS));
 }
 
 #[tokio::test]
 async fn throttle_same_ip() {
     let test_file = benches_dir().join("throttle").join("same_ip.md");
     let config = Config::new(
-        test_file.clone(),
         mle::Config {
-            files_and_dirs: vec![test_file.clone().into()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
+            markup_files: vec![test_file.clone().into()],
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
             ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
             result_format: mle::result::Type::Markdown,
             result_extended: true,
             result_flush: true,
@@ -110,5 +98,5 @@ async fn throttle_same_ip() {
     let start = Instant::now();
     mlc::run(&config).await.unwrap_or(());
     let duration = start.elapsed();
-    assert!(duration > Duration::from_millis(THROTTLED_TIME_MS))
+    assert!(duration > Duration::from_millis(THROTTLED_TIME_MS));
 }

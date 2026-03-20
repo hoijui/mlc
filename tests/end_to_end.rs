@@ -8,30 +8,45 @@
 #[cfg(test)]
 mod helper;
 
-use clap::ValueEnum;
+use cli_utils::StreamIdent;
 use helper::benches_dir;
 use mlc::Config;
 use mlc::OptionalConfig;
+use mle::markup;
 use mle::markup::Type as MarkupType;
-use mle::path_buf::PathBuf;
 use std::convert::TryInto;
 use std::fs;
 use std::path::MAIN_SEPARATOR;
 
 #[tokio::test]
 async fn end_to_end() {
-    let directory: PathBuf = benches_dir().join("benchmark").into();
+    let markup_types = vec![markup::Type::Markdown];
+    let root = benches_dir().join("benchmark");
+    let ignore_paths = vec![
+        "benches/benchmark/markdown/ignore_me.md"
+            .try_into()
+            .unwrap(),
+        "./benches/benchmark/markdown/ignore_me_dir"
+            .try_into()
+            .unwrap(),
+    ];
+    let ignore_links = vec![wildmatch::WildMatch::new("./doc/broken-local-link.doc")];
+    let markup_files = markup::Type::find(root.as_path().into(), markup_types, ignore_paths)
+        .await
+        .unwrap();
     let config = Config::new(
-        directory.clone(),
+        // directory.clone(),
         mle::Config {
-            files_and_dirs: vec![directory.clone()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
-            ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
-            result_format: mle::result::Type::Markdown,
+            markup_files,
+            // recursive: true,
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
+            // ignore_paths: vec![],
+            // ignore_links: vec![],
+            ignore_links,
+            // markup_types: MarkupType::value_variants().to_vec(),
+            // result_format: mle::result::Type::Markdown,
+            result_format: mle::result::Type::Json,
             result_extended: true,
             result_flush: true,
         },
@@ -42,15 +57,10 @@ async fn end_to_end() {
             offline: None,
             match_file_extension: None,
             throttle: None,
-            ignore_links: Some(vec!["./doc/broken-local-link.doc".to_string()]),
-            ignore_paths: Some(vec![
-                "benches/benchmark/markdown/ignore_me.md"
-                    .try_into()
-                    .unwrap(),
-                "./benches/benchmark/markdown/ignore_me_dir"
-                    .try_into()
-                    .unwrap(),
-            ]),
+            // ignore_links: Some(ignore_links),
+            ignore_links: None,
+            // ignore_paths: Some(ignore_paths),
+            ignore_paths: None,
             root_dir: None,
             git_ignore: None,
             git_untracked: None,
@@ -66,21 +76,39 @@ async fn end_to_end() {
 
 #[tokio::test]
 async fn end_to_end_different_root() {
+    let markup_types = vec![markup::Type::Markdown];
+    let root = benches_dir().join("different_root");
+    let ignore_paths = vec![];
+    let markup_files = markup::Type::find(root.as_path().into(), markup_types, ignore_paths)
+        .await
+        .unwrap();
+    // let config = Config {
+    //     markup_files,
+    //     links: Some(StreamIdent::StdOut),
+    //     anchors: Some(StreamIdent::StdOut),
+    //     result_format: result::Type::Json,
+    //     ..Default::default()
+    // };
+
     let test_files = benches_dir().join("different_root");
     let csv_output = std::env::temp_dir().join("mlc_test_output.csv");
     let config = Config::new(
-        test_files.clone(),
+        // test_files.clone(),
         mle::Config {
-            files_and_dirs: vec![test_files.clone().into()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
-            ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
-            result_format: mle::result::Type::Markdown,
-            result_extended: true,
-            result_flush: true,
+            markup_files,
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
+            result_format: mle::result::Type::Json,
+            ..Default::default() // files_and_dirs: vec![test_files.clone().into()],
+                                 // recursive: true,
+                                 // links: Some(StreamIdent::StdOut),
+                                 // anchors: Some(StreamIdent::StdOut),
+                                 // ignore_paths: vec![],
+                                 // ignore_links: vec![],
+                                 // markup_types: MarkupType::value_variants().to_vec(),
+                                 // result_format: mle::result::Type::Markdown,
+                                 // result_extended: true,
+                                 // result_flush: true,
         },
         OptionalConfig {
             debug: Some(true),
@@ -114,19 +142,27 @@ async fn end_to_end_different_root() {
 async fn end_to_end_write_csv_file() {
     let test_files = benches_dir().join("benchmark/markdown/ignore_me.md");
     let csv_output = std::env::temp_dir().join("mlc_test_output.csv");
+    let markup_files = vec![test_files.into()];
     let config = Config::new(
-        test_files.clone(),
+        // test_files.clone(),
         mle::Config {
-            files_and_dirs: vec![test_files.clone().into()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
-            ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
-            result_format: mle::result::Type::Markdown,
-            result_extended: true,
-            result_flush: true,
+            markup_files,
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
+            result_format: mle::result::Type::Json,
+            ..Default::default() // let config = Config::new(
+                                 //     // test_files.clone(),
+                                 //     mle::Config {
+                                 //         files_and_dirs: vec![test_files.clone().into()],
+                                 //         recursive: true,
+                                 //         links: Some(StreamIdent::StdOut),
+                                 //         anchors: Some(StreamIdent::StdOut),
+                                 //         ignore_paths: vec![],
+                                 //         ignore_links: vec![],
+                                 //         markup_types: MarkupType::value_variants().to_vec(),
+                                 //         result_format: mle::result::Type::Markdown,
+                                 //         result_extended: true,
+                                 //         result_flush: true,
         },
         OptionalConfig {
             debug: None,

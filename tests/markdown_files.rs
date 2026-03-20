@@ -8,14 +8,13 @@
 
 use std::sync::Arc;
 
-use clap::ValueEnum;
+use cli_utils::{StreamIdent, path_buf::PathBuf};
 use mlc::{Config, OptionalConfig};
 #[cfg(test)]
 use mle::extractors::find_links;
 use mle::{
     link::{FileLoc, FileSystemLoc, Position},
     markup::{Content, File as MarkupFile, Type as MarkupType},
-    path_buf::PathBuf,
 };
 
 #[tokio::test]
@@ -29,15 +28,11 @@ async fn no_links() {
         start: Position::new(),
     };
     let config = Config::new(
-        directory.clone(),
         mle::Config {
-            files_and_dirs: vec![file_path.clone()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
+            markup_files: vec![file_path.clone()],
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
             ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
             result_format: mle::result::Type::Markdown,
             result_extended: true,
             result_flush: true,
@@ -49,7 +44,7 @@ async fn no_links() {
     )
     .await
     .unwrap();
-    let result = find_links(&file, &config.extractor_cfg()).await.unwrap();
+    let result = find_links(&file, config.extractor_cfg()).await.unwrap();
     assert!(result.links.is_empty());
 }
 
@@ -64,15 +59,11 @@ async fn some_links() {
         start: Position::new(),
     };
     let config = Config::new(
-        directory.clone(),
         mle::Config {
-            files_and_dirs: vec![file_path.clone()],
-            recursive: true,
-            links: Some(None),
-            anchors: Some(None),
-            ignore_paths: vec![],
+            markup_files: vec![file_path.clone()],
+            links: Some(StreamIdent::StdOut),
+            anchors: Some(StreamIdent::StdOut),
             ignore_links: vec![],
-            markup_types: MarkupType::value_variants().to_vec(),
             result_format: mle::result::Type::Markdown,
             result_extended: true,
             result_flush: true,
@@ -84,6 +75,6 @@ async fn some_links() {
     )
     .await
     .unwrap();
-    let result = find_links(&file, &config.extractor_cfg()).await.unwrap();
+    let result = find_links(&file, config.extractor_cfg()).await.unwrap();
     assert_eq!(result.links.len(), 11);
 }

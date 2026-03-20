@@ -11,12 +11,13 @@ use async_std::fs::canonicalize;
 use async_std::path::PathBuf as AsyncPathBuf;
 use async_std::stream::StreamExt;
 use async_walkdir::WalkDir;
+use cli_utils::path_buf::PathBuf;
 use log::{debug, info, warn};
 use mle::link::FileSystemTarget;
 use mle::link::Link;
-use mle::path_buf::PathBuf;
 use std::borrow::Cow;
 use std::path::MAIN_SEPARATOR;
+use std::str::FromStr;
 use std::sync::LazyLock;
 
 pub async fn check_filesystem(target: &FileSystemTarget, config: &Config) -> LinkCheckResult {
@@ -125,12 +126,14 @@ pub fn resolve_target_link(link: &Link, config: &Config) -> mle::link::Target {
             // Remove verbatim path identifier which causes trouble on windows when using ../../ in paths
             let abs_path = abs_path
                 .strip_prefix(r"\\?\")
-                .map(|path| PathBuf::from(path.into()))
+                .map(PathBuf::from)
                 .unwrap_or_else(|_err| abs_path.into_owned())
                 .display()
                 .to_string();
             mle::link::Target::FileSystem(mle::link::FileSystemTarget {
-                file: mle::link::FileSystemLoc::Absolute(PathBuf::from(abs_path.into())),
+                file: mle::link::FileSystemLoc::Absolute(
+                    PathBuf::from_str(&abs_path).expect("Infallible"),
+                ),
                 anchor: fs_target.anchor.clone(),
             })
         }

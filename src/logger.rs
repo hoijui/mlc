@@ -7,7 +7,6 @@
 
 use log::debug;
 use serde::Deserialize;
-use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 use std::time::SystemTime;
 
 #[derive(Debug, Default, Clone, Copy, Deserialize)]

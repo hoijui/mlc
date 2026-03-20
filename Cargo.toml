@@ -14,12 +14,12 @@ categories = ["command-line-utilities", "development-tools::testing", "text-proc
 keywords = ["link-checker", "broken", "markup", "html", "markdown"]
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/becheran/mlc"
+repository = "https://github.com/hoijui/mlc"
 
 [badges]
 maintenance = { status = "actively-developed" }
-is-it-maintained-open-issues = { repository = "becheran/mlc" }
-is-it-maintained-issue-resolution = { repository = "becheran/mlc" }
+is-it-maintained-open-issues = { repository = "hoijui/mlc" }
+is-it-maintained-issue-resolution = { repository = "hoijui/mlc" }
 
 [lints.rust]
 rust_2024_compatibility = { level = "warn", priority = -1 }
@@ -57,15 +57,16 @@ map_unwrap_or = { level = "allow", priority = 1 }
 [dependencies]
 async-std = "1.12"
 async-walkdir = "2.1"
-clap = { version = "4.0", features = ["cargo"] }
+clap = { version = "4.5", features = ["cargo"] }
+cli_utils = { path = "../cli-utils-rs", package = "cli_utils_hoijui", default-features = false, features = ["async", "serde", "ignore_path", "file_traversal"] }
 colored = "3.0"
 const_format = "0.2"
 fern = "0.7"
 futures = "0.3"
 git-version = "0.3"
 log = "0.4"
-# mle = { path = "../mle" }
-mle = "0.27"
+mle = { path = "../mle" }
+# mle = "0.27"
 pulldown-cmark = "0.13"
 regex = "1.12"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "brotli", "gzip", "deflate"] }
@@ -78,6 +79,7 @@ url-escape = "0.1"
 wildmatch = "2.4"
 
 [dev-dependencies]
+cli_utils = { path = "../cli-utils-rs", package = "cli_utils_hoijui", default-features = false, features = ["async", "serde", "ignore_path", "file_traversal"] }
 criterion = "0.7"
 mockito = "1.6"
 ntest = "0.9"

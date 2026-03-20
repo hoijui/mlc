@@ -5,26 +5,27 @@
  * SPDX-License-Identifier: MIT
  */
 
+use crate::link_validator::resolve_target_link;
 use async_std::fs::canonicalize;
+use cli_utils::ignore_path::IgnorePath;
+use cli_utils::path_buf::PathBuf;
+pub use colored::*;
+use futures::{StreamExt, stream};
+use git_version::git_version;
+use link_validator::LinkCheckResult;
 use log::info;
-use mle::ignore_path::IgnorePath;
+use mle::BoxResult;
 use mle::link::Link;
 use mle::link::Locator;
 use mle::link::Target;
 use mle::markup;
-use mle::path_buf::PathBuf;
-use std::fmt::Write;
-use crate::link_validator::resolve_target_link;
-use futures::{StreamExt, stream};
-use link_validator::LinkCheckResult;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
+use std::fmt::Write;
 use std::fs;
 use std::path::Path;
-pub use colored::*;
-use git_version::git_version;
 use std::process::Command;
 use std::sync::Arc;
 use std::vec;
@@ -48,8 +49,10 @@ pub struct OptionalConfig {
     pub offline: Option<bool>,
     #[serde(rename(deserialize = "match-file-extension"))]
     pub match_file_extension: Option<bool>,
+    /// TODO Deprecate(ed), because it is in mle now
     #[serde(rename(deserialize = "ignore-links"))]
     pub ignore_links: Option<Vec<String>>,
+    /// TODO Deprecate(ed), because it happens before me (outside, with CLI tools)
     #[serde(rename(deserialize = "ignore-path"))]
     pub ignore_paths: Option<Vec<IgnorePath>>,
     #[serde(rename(deserialize = "root-dir"))]
@@ -100,7 +103,7 @@ impl OptionalConfig {
 
 #[derive(Default, Debug, Deserialize)]
 pub struct Config {
-    pub(crate) directory: PathBuf,
+    // pub(crate) directory: PathBuf,
     pub(crate) extractor_cfg: mle::Config,
     pub(crate) optional: OptionalConfig,
     #[serde(skip)]
@@ -109,35 +112,35 @@ pub struct Config {
 
 impl Config {
     pub async fn new(
-        directory: impl Into<PathBuf>,
+        // directory: impl Into<PathBuf>,
         extractor_cfg: mle::Config,
         mut optional: OptionalConfig,
-    ) -> Result<Self, String> {
+    ) -> BoxResult<Self> {
         optional.canonicalize_root_dir().await?;
         let rel_path_base = optional
             .eval_rel_path_base()
             .await
             .map_err(|err| err.to_string())?;
         Ok(Self {
-            directory: directory.into(),
+            // directory: directory.into(),
             extractor_cfg,
             optional,
             rel_path_base,
         })
     }
 
-    #[must_use]
-    pub const fn directory(&self) -> &PathBuf {
-        &self.directory
-    }
+    // #[must_use]
+    // pub const fn directory(&self) -> &PathBuf {
+    //     &self.directory
+    // }
 
     #[must_use]
-    pub fn extractor_cfg(&self) -> &mle::Config {
+    pub const fn extractor_cfg(&self) -> &mle::Config {
         &self.extractor_cfg
     }
 
     #[must_use]
-    pub fn optional(&self) -> &OptionalConfig {
+    pub const fn optional(&self) -> &OptionalConfig {
         &self.optional
     }
 }
@@ -169,7 +172,6 @@ impl fmt::Display for Config {
             f,
             "
 Debug: {:?}
-Dir: {}
 DoNotWarnForRedirectTo: {:?}
 Types: {:?}
 Offline: {}
@@ -182,7 +184,7 @@ IgnorePaths: {:?}
 Throttle: {} ms
 CSVFile: {:?}",
             self.optional.debug.unwrap_or(false),
-            self.directory.as_os_str().to_str().unwrap_or_default(),
+            // self.directory.as_os_str().to_str().unwrap_or_default(),
             self.optional.do_not_warn_for_redirect_to,
             markup_types_str,
             self.optional.offline.unwrap_or_default(),

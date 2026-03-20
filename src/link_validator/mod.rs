@@ -17,9 +17,9 @@ use crate::link_validator::http::check_http;
 use log::info;
 use mail::check_mail;
 use mle::ColoredString;
+use mle::Colorize;
 use mle::link::Link;
 use mle::link::Target;
-use mle::Colorize;
 use wildmatch::WildMatch;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
