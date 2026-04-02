@@ -6,16 +6,16 @@
  */
 
 use log::debug;
-use serde::Deserialize;
+// use serde::Deserialize;
 use std::time::SystemTime;
 
-#[derive(Debug, Default, Clone, Copy, Deserialize)]
-pub enum LogLevel {
-    Info,
-    #[default]
-    Warn,
-    Debug,
-}
+// #[derive(Debug, Default, Clone, Copy, Deserialize)]
+// pub enum LogLevel {
+//     Info,
+//     #[default]
+//     Warn,
+//     Debug,
+// }
 
 // pub fn init(log_level: LogLevel) {
 //     let level_filter = match log_level {

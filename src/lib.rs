@@ -5,24 +5,26 @@
  * SPDX-License-Identifier: MIT
  */
 
+pub mod config;
+pub mod link_validator;
+
+use crate::config::Config;
+use crate::config::WinPathSepStrategy;
 use crate::link_validator::resolve_target_link;
-use async_std::fs::canonicalize;
-use cli_utils::ignore_path::IgnorePath;
 use cli_utils::path_buf::PathBuf;
-pub use colored::*;
 use futures::{StreamExt, stream};
 use git_version::git_version;
 use link_validator::LinkCheckResult;
 use log::info;
 use mle::BoxResult;
+use mle::ColoredString;
+use mle::link::FileSystemLoc;
+use mle::link::FileSystemTarget;
 use mle::link::Link;
 use mle::link::Locator;
 use mle::link::Target;
-use mle::markup;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
-use std::fmt;
 use std::fmt::Write;
 use std::fs;
 use std::path::Path;
@@ -31,174 +33,8 @@ use std::sync::Arc;
 use std::vec;
 use tokio::sync::Mutex;
 use tokio::time::{Duration, Instant, sleep_until};
-pub use wildmatch::WildMatch;
-
-pub mod link_validator;
 
 pub const VERSION: &str = git_version!(cargo_prefix = "", fallback = "unknown");
-
-const PARALLEL_REQUESTS: usize = 20;
-
-#[derive(Default, Debug, Deserialize)]
-pub struct OptionalConfig {
-    pub debug: Option<bool>,
-    #[serde(rename(deserialize = "do-not-warn-for-redirect-to"))]
-    pub do_not_warn_for_redirect_to: Option<Vec<WildMatch>>,
-    #[serde(rename(deserialize = "markup-types"))]
-    pub markup_types: Option<Vec<markup::Type>>,
-    pub offline: Option<bool>,
-    #[serde(rename(deserialize = "match-file-extension"))]
-    pub match_file_extension: Option<bool>,
-    /// TODO Deprecate(ed), because it is in mle now
-    #[serde(rename(deserialize = "ignore-links"))]
-    pub ignore_links: Option<Vec<String>>,
-    /// TODO Deprecate(ed), because it happens before me (outside, with CLI tools)
-    #[serde(rename(deserialize = "ignore-path"))]
-    pub ignore_paths: Option<Vec<IgnorePath>>,
-    #[serde(rename(deserialize = "root-dir"))]
-    pub root_dir: Option<PathBuf>,
-    #[serde(rename(deserialize = "csv"))]
-    pub csv_file: Option<PathBuf>,
-    #[serde(rename(deserialize = "git-ignore"))]
-    pub git_ignore: Option<bool>,
-    #[serde(rename(deserialize = "git-untracked"))]
-    pub git_untracked: Option<bool>,
-    pub throttle: Option<u32>,
-}
-
-impl OptionalConfig {
-    async fn canonicalize_root_dir(&mut self) -> Result<(), String> {
-        if let Some(root_dir) = self.root_dir.as_ref() {
-            match canonicalize(root_dir.as_path()).await {
-                Ok(new_root) => {
-                    self.root_dir = Some(new_root.into());
-                }
-                Err(err) => {
-                    return Err(format!(
-                        "Root path could not be converted to an absolute path. Does the directory exit? - '{err}'"
-                    ));
-                }
-            }
-        }
-        Ok(())
-    }
-    // pub fn root_dir(&self) -> std::io::Result<async_std::path::PathBuf> {
-    //     Ok(if let Some(root_dir) = self.root_dir {
-    //         Cow::Borrowed(async_std::path::PathBuf::into(root_dir))
-    //     } else {
-    //         Cow::Owned(env::current_dir()?.into())
-    //     })
-    // }
-    pub async fn eval_rel_path_base(&mut self) -> std::io::Result<PathBuf> {
-        self.canonicalize_root_dir()
-            .await
-            .map_err(std::io::Error::other)?;
-        Ok(if let Some(root_dir) = self.root_dir.clone() {
-            root_dir
-        } else {
-            env::current_dir()?.into()
-        })
-    }
-}
-
-#[derive(Default, Debug, Deserialize)]
-pub struct Config {
-    // pub(crate) directory: PathBuf,
-    pub(crate) extractor_cfg: mle::Config,
-    pub(crate) optional: OptionalConfig,
-    #[serde(skip)]
-    pub(crate) rel_path_base: PathBuf,
-}
-
-impl Config {
-    pub async fn new(
-        // directory: impl Into<PathBuf>,
-        extractor_cfg: mle::Config,
-        mut optional: OptionalConfig,
-    ) -> BoxResult<Self> {
-        optional.canonicalize_root_dir().await?;
-        let rel_path_base = optional
-            .eval_rel_path_base()
-            .await
-            .map_err(|err| err.to_string())?;
-        Ok(Self {
-            // directory: directory.into(),
-            extractor_cfg,
-            optional,
-            rel_path_base,
-        })
-    }
-
-    // #[must_use]
-    // pub const fn directory(&self) -> &PathBuf {
-    //     &self.directory
-    // }
-
-    #[must_use]
-    pub const fn extractor_cfg(&self) -> &mle::Config {
-        &self.extractor_cfg
-    }
-
-    #[must_use]
-    pub const fn optional(&self) -> &OptionalConfig {
-        &self.optional
-    }
-}
-
-impl fmt::Display for Config {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ignore_str: Vec<String> = match &self.optional.ignore_links {
-            Some(s) => s.iter().map(ToString::to_string).collect(),
-            None => vec![],
-        };
-        let root_dir_str = match &self.optional.root_dir {
-            Some(path) => path.as_os_str().to_str().unwrap_or(""),
-            None => "",
-        };
-        let ignore_path_str: Vec<String> = match &self.optional.ignore_paths {
-            Some(paths) => paths.iter().map(ToString::to_string).collect(),
-            None => vec![],
-        };
-        let csv_file_str: Option<String> = self
-            .optional
-            .csv_file
-            .as_ref()
-            .map(|path| path.display().to_string());
-        let markup_types_str: Vec<String> = match &self.optional.markup_types {
-            Some(types) => types.iter().map(|m| format!("{m:?}")).collect(),
-            None => vec![],
-        };
-        write!(
-            f,
-            "
-Debug: {:?}
-DoNotWarnForRedirectTo: {:?}
-Types: {:?}
-Offline: {}
-MatchExt: {}
-RootDir: {}
-git_ignore: {}
-git_untracked: {}
-IgnoreLinks: {}
-IgnorePaths: {:?}
-Throttle: {} ms
-CSVFile: {:?}",
-            self.optional.debug.unwrap_or(false),
-            // self.directory.as_os_str().to_str().unwrap_or_default(),
-            self.optional.do_not_warn_for_redirect_to,
-            markup_types_str,
-            self.optional.offline.unwrap_or_default(),
-            self.optional.match_file_extension.unwrap_or_default(),
-            root_dir_str,
-            self.optional.git_ignore.unwrap_or_default(),
-            self.optional.git_untracked.unwrap_or_default(),
-            ignore_str.join(","),
-            ignore_path_str,
-            self.optional.throttle.unwrap_or(0),
-            csv_file_str
-        )
-    }
-}
 
 #[derive(Debug, Clone)]
 struct FinalResult {
@@ -287,11 +123,11 @@ fn find_git_untracked_files() -> Option<Vec<PathBuf>> {
     }
 }
 
-// fn print_link(link: &Link, status_code: &colored::ColoredString, msg: &str, error_channel: bool) {
+// fn print_link(link: &Link, status_code: &ColoredString, msg: &str, error_channel: bool) {
 fn print_link(
     target: &Target,
     source: &Locator,
-    status_code: &colored::ColoredString,
+    status_code: &ColoredString,
     msg: &str,
     error_channel: bool,
 ) {
@@ -340,7 +176,7 @@ fn print_result(result: &FinalResult, links: &HashMap<Target, Vec<Locator>>) {
     }
 }
 
-pub async fn run(config: &Config) -> Result<(), String> {
+pub async fn run(config: &Config) -> BoxResult<()> {
     let links = find_all_links(config).await;
     // This groups all links that have the same target **file/location**,
     // disregarding the anker/fragment.
@@ -435,7 +271,42 @@ pub async fn run(config: &Config) -> Result<(), String> {
         //     continue;
         // }
 
-        let target = resolve_target_link(&link, config);
+        if !config
+            .optional
+            .do_not_warn_for_absolute_paths
+            .unwrap_or_default()
+        {
+            if let Target::FileUrl(_) = &link.target {
+                log::warn!("Detected link with file URL: {link}");
+            } else if let Target::FileSystem(FileSystemTarget {
+                file: FileSystemLoc::Absolute(_),
+                ..
+            }) = &link.target
+            {
+                log::warn!("Detected link with absolute file-system path: {link}");
+            }
+        }
+
+        log::error!("XXX test output 0");
+        if let Some(action) = &config.optional.on_win_path_sep
+            && !matches!(action, WinPathSepStrategy::Accept)
+            && let Target::FileSystem(FileSystemTarget { file, .. }) = &link.target
+            && file.get_raw().contains('\\')
+        {
+            match action {
+                WinPathSepStrategy::Accept => (),
+                WinPathSepStrategy::Warn => {
+                    log::warn!(r"Detected link with Windows path separator(s) ('\'): {link}");
+                }
+                WinPathSepStrategy::Error => {
+                    log::error!(r"Detected link with Windows path separator(s) ('\'): {link}");
+                    // TODO FIXME Also return an error somehow
+                    continue;
+                }
+            }
+        }
+
+        let target = resolve_target_link(&link, config)?;
         link_target_groups
             .entry(target)
             .or_default()
@@ -516,7 +387,7 @@ pub async fn run(config: &Config) -> Result<(), String> {
                 }
             }
         })
-        .buffer_unordered(PARALLEL_REQUESTS);
+        .buffer_unordered(config::DEFAULT_PARALLEL_REQUESTS);
 
     let mut oks = 0;
     let mut skipped = 0;
@@ -574,6 +445,7 @@ pub async fn run(config: &Config) -> Result<(), String> {
     println!("Errors   {error_sum}");
     println!();
 
+    // return Ok(());
     if errors.is_empty() {
         Ok(())
     } else {
@@ -583,10 +455,10 @@ pub async fn run(config: &Config) -> Result<(), String> {
         writeln!(error_msg).unwrap();
         for res in errors {
             for source in &link_target_groups[&res.target] {
-                writeln!(error_msg, "{source}").unwrap();
+                writeln!(error_msg, "{source}:{:#?}", res.target).unwrap();
             }
         }
         writeln!(error_msg).unwrap();
-        Err(error_msg)
+        Err(error_msg.into())
     }
 }

@@ -8,7 +8,7 @@
 #[cfg(test)]
 use std::path::{Path, PathBuf};
 
-pub fn benches_dir() -> PathBuf {
+fn proj_root_dir() -> PathBuf {
     Path::new(file!())
         .parent()
         .unwrap()
@@ -16,5 +16,13 @@ pub fn benches_dir() -> PathBuf {
         .unwrap()
         .parent()
         .unwrap()
-        .join("benches")
+        .into()
+}
+
+pub fn benches_dir() -> PathBuf {
+    proj_root_dir().join("benches")
+}
+
+pub fn target_dir() -> PathBuf {
+    proj_root_dir().join("target")
 }

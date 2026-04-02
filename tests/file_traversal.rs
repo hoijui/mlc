@@ -8,13 +8,12 @@
 #[cfg(test)]
 mod helper;
 
+use crate::helper::{benches_dir, target_dir};
 use async_std::fs;
 use clap::ValueEnum;
 use cli_utils::path_buf::PathBuf;
 use mle::markup;
 use mle::markup::Type as MarkupType;
-
-use crate::helper::benches_dir;
 
 #[tokio::test]
 async fn find_markdown_files() {
@@ -30,7 +29,7 @@ async fn find_markdown_files() {
 #[tokio::test]
 async fn empty_folder() {
     let markup_types = vec![MarkupType::Markdown];
-    let root = PathBuf::from("./target/empty");
+    let root: PathBuf = target_dir().join("empty").into();
     if !root.exists().await {
         fs::create_dir(&root).await.unwrap();
     }

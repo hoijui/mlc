@@ -6,6 +6,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::LazyLock;
 
 use crate::link_validator::LinkCheckResult;

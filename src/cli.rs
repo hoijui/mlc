@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2019 - 2022 Armin Becher <becherarmin@gmail.com>
  * SPDX-FileCopyrightText: 2022 Gervasio Marchand <github@gervas.io>
- * SPDX-FileCopyrightText: 2022 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
+ * SPDX-FileCopyrightText: 2022 - 2026 Robin Vobruba <hoijui.quaero@gmail.com>
  * SPDX-FileCopyrightText: 2023 Paul Hazen <paul-hazen@live.com>
  *
  * SPDX-License-Identifier: MIT
@@ -9,17 +9,15 @@
 
 use clap::Arg;
 use clap::ArgAction;
-use clap::ArgGroup;
-use clap::Command;
-use clap::command;
 use cli_utils::path_buf::PathBuf;
-use mlc::Config;
-use mlc::OptionalConfig;
+use mlc::config::Config;
+use mlc::config::OptionalConfig;
 use mle::BoxResult;
-use mle::markup::Type as MarkupType;
+use std::env;
+// use mle::markup::Type as MarkupType;
 use std::fs;
 use std::path::MAIN_SEPARATOR_STR;
-use std::path::Path;
+// use std::path::Path;
 use std::str::FromStr;
 use std::sync::LazyLock;
 use wildmatch::WildMatch;
@@ -30,6 +28,7 @@ pub const A_L_DEBUG: &str = "debug";
 pub const A_S_DEBUG: char = 'd';
 pub const A_L_OFFLINE: &str = "offline";
 pub const A_S_OFFLINE: char = 'o';
+pub const A_L_MATCH_FILE_EXTENSION: &str = "match-file-extension";
 pub const A_L_NO_REDIRECT_WARN: &str = "do-not-warn-for-redirect-to";
 pub const A_L_THROTTLE: &str = "throttle";
 pub const A_S_THROTTLE: char = 'T';
@@ -51,6 +50,17 @@ pub fn arg_offline() -> Arg {
         .short(A_S_OFFLINE)
         .help("Do not check web links")
         .action(ArgAction::SetTrue)
+}
+
+pub fn arg_match_file_extension() -> Arg {
+    Arg::new(A_L_MATCH_FILE_EXTENSION)
+        .long(A_L_MATCH_FILE_EXTENSION)
+        .action(ArgAction::SetTrue)
+        .help(
+            "When checking if the target file exists, \
+ignore the file extension \
+(as in: also check for the file without its extension)",
+        )
 }
 
 pub fn arg_no_redirect_warn() -> Arg {
@@ -89,12 +99,13 @@ pub fn arg_root_dir() -> Arg {
     // .default_value(".")
 }
 
-static ARGS: LazyLock<[Arg; 12]> = LazyLock::new(|| {
-    [
+static ARGS: LazyLock<Vec<Arg>> = LazyLock::new(|| {
+    vec![
         mle::cli::arg_version(),
         mle::cli::arg_quiet(),
         arg_debug(),
         arg_offline(),
+        arg_match_file_extension(),
         arg_no_redirect_warn(),
         arg_throttle(),
         arg_timeout(),
@@ -106,34 +117,41 @@ static ARGS: LazyLock<[Arg; 12]> = LazyLock::new(|| {
     ]
 });
 
-fn arg_matcher() -> Command {
-    let duplicate_short_options = mle::cli::find_duplicate_short_options();
-    assert!(
-        duplicate_short_options.is_empty(),
-        "Duplicate argument short options: {duplicate_short_options:?}",
-    );
-    command!()
-        .bin_name(clap::crate_name!())
-        .help_expected(true)
-        .disable_version_flag(true)
-        .args(ARGS.iter())
-        .group(
-            ArgGroup::new("markup-files")
-                .args([mle::cli::A_N_MARKUP_FILES, mle::cli::A_L_MARKUP_FILES_LIST])
-                .required(true),
-        )
-}
+// /// Returns the argument matcher for the CLI.
+// ///
+// /// # Panics
+// ///
+// /// - if duplicate argument short options are found -
+// ///   which is a programmer error
+// fn arg_matcher() -> Command {
+//     let duplicate_short_options = mle::cli::find_duplicate_short_options();
+//     assert!(
+//         duplicate_short_options.is_empty(),
+//         "Duplicate argument short options: {duplicate_short_options:?}",
+//     );
+//     command!()
+//         .bin_name(clap::crate_name!())
+//         .help_expected(true)
+//         .disable_version_flag(true)
+//         .args(ARGS.iter())
+// }
 
 pub async fn parse_args() -> BoxResult<Config> {
-    let mut opt: OptionalConfig = match fs::read_to_string(CONFIG_FILE_PATH) {
-        Ok(content) => match toml::from_str(&content) {
+    let mut opt: OptionalConfig = fs::read_to_string(CONFIG_FILE_PATH).map_or_else(
+        |_| OptionalConfig::default(),
+        |content| match toml::from_str(&content) {
             Ok(o) => o,
             Err(err) => panic!("Invalid TOML file {err:?}"),
         },
-        Err(_) => OptionalConfig::default(),
-    };
+    );
 
-    let matches = arg_matcher().get_matches();
+    eprintln!("mlC - before args parsing");
+    eprintln!(
+        "mlC - env::args():\n\t{}",
+        env::args().collect::<Vec<String>>().join("\n\t")
+    );
+    let mut matches = mle::cli::arg_matcher(clap::crate_name!(), &ARGS).get_matches();
+    eprintln!("mlC - after args parsing");
 
     let quiet = matches.get_flag(mle::cli::A_L_QUIET);
     let version = matches.get_flag(mle::cli::A_L_VERSION);
@@ -141,7 +159,19 @@ pub async fn parse_args() -> BoxResult<Config> {
         mle::cli::print_version_and_exit(mlc::VERSION, quiet);
     }
 
-    let extractor_cfg = mle::cli::parse_args().await?;
+    eprintln!("mlE(internal) - before args parsing");
+    eprintln!(
+        "mlE(internal) - env::args():\n\t{}",
+        env::args().collect::<Vec<String>>().join("\n\t")
+    );
+    // let extractor_cfg = mle::cli::parse_args(true).await?;
+    let extractor_cfg = mle::config::Extractor {
+        markup_files: mle::cli::markup_files(&mut matches).await?,
+        links: true,
+        anchors: true,
+        ignore_links: mle::cli::ignore_links(&mut matches),
+    };
+    eprintln!("mlE(internal) - after args parsing");
     // let mut extractor_cfg = mle::config::Config::default();
 
     // let default_dir = format!(".{}", &MAIN_SEPARATOR);
@@ -172,30 +202,30 @@ pub async fn parse_args() -> BoxResult<Config> {
         opt.throttle = Some(throttle);
     }
 
-    if let Some(f) = matches.get_one::<String>("csv") {
-        opt.csv_file = Some(
-            Path::new(&f.replace(['/', '\\'], std::path::MAIN_SEPARATOR_STR))
-                .to_path_buf()
-                .into(),
-        );
-    }
+    // if let Some(f) = matches.get_one::<String>("csv") {
+    //     opt.csv_file = Some(
+    //         Path::new(&f.replace(['/', '\\'], std::path::MAIN_SEPARATOR_STR))
+    //             .to_path_buf()
+    //             .into(),
+    //     );
+    // }
 
-    if let Some(markup_types) = matches.get_many::<String>("markup-types") {
-        opt.markup_types = Some(
-            markup_types
-                .map(|v| v.as_str().parse().expect("invalid markup type"))
-                .collect(),
-        );
-    }
-    if opt.markup_types.is_none() {
-        opt.markup_types = Some(vec![MarkupType::Markdown, MarkupType::Html]);
-    }
+    // if let Some(markup_types) = matches.get_many::<String>("markup-types") {
+    //     opt.markup_types = Some(
+    //         markup_types
+    //             .map(|v| v.as_str().parse().expect("invalid markup type"))
+    //             .collect(),
+    //     );
+    // }
+    // if opt.markup_types.is_none() {
+    //     opt.markup_types = Some(vec![MarkupType::Markdown, MarkupType::Html]);
+    // }
 
     if matches.get_flag(A_L_OFFLINE) {
         opt.offline = Some(true);
     }
 
-    if matches.get_flag("match-file-extension") {
+    if matches.get_flag(A_L_MATCH_FILE_EXTENSION) {
         opt.match_file_extension = Some(true);
     }
 
@@ -214,6 +244,10 @@ pub async fn parse_args() -> BoxResult<Config> {
         }
         opt.root_dir = Some(root_path);
     }
+
+    // eprintln!("mlE(internal) - before args parsing");
+    // let extractor_cfg = mle::cli::parse_args(true).await?;
+    // eprintln!("mlE(internal) - after args parsing");
 
     Config::new(extractor_cfg, opt).await
 }

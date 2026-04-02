@@ -14,6 +14,7 @@ use std::sync::LazyLock;
 use crate::Config;
 use crate::link_validator::file_system::check_filesystem;
 use crate::link_validator::http::check_http;
+use cli_utils::BoxResult;
 use log::info;
 use mail::check_mail;
 use mle::ColoredString;
@@ -75,12 +76,20 @@ impl LinkCheckResult {
     }
 }
 
-#[must_use]
-pub fn resolve_target_link(link: &Link, config: &Config) -> Target {
+/// This performs a (kind of) canonicalization of the link target.
+///
+/// We call this in order to only check each link once,
+/// even if it appears in different forms.
+///
+/// For example,
+/// target `hello.html` in file `index.html`
+/// and target `../hello.html` in file `sub-dir/sub-file.html`
+/// will be canonicalized to the same target.
+pub fn resolve_target_link(link: &Link, config: &Config) -> BoxResult<mle::link::Target> {
     if link.target.is_file_system() {
         file_system::resolve_target_link(link, config)
     } else {
-        link.target.clone()
+        Ok(link.target.clone())
     }
 }
 
