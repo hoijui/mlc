@@ -58,7 +58,7 @@ map_unwrap_or = { level = "allow", priority = 1 }
 async-std = "1.12"
 async-walkdir = "2.1"
 bstr = "1.12"
-clap = { version = "4.5", features = ["cargo"] }
+clap = { version = "4.6", features = ["cargo"] }
 # cli_utils = { path = "../cli-utils-rs", package = "cli_utils_hoijui", default-features = false, features = ["async", "serde", "ignore_path", "file_traversal"] }
 cli_utils = { version = "0.13", package = "cli_utils_hoijui", default-features = false, features = ["async", "serde", "ignore_path", "file_traversal"] }
 colored = "3.0"
@@ -70,11 +70,11 @@ log = "0.4"
 mle = { path = "../mle" }
 # mle = "0.28"
 pulldown-cmark = "0.13"
-regex = "1.12"
+regex = "1.13"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "brotli", "gzip", "deflate"] }
 serde = { version = "1.0", features = ["derive"] }
 # simplelog = "0.12"
-tokio = { version = "1.48", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "time"] }
 toml = "1.1"
 url = "2.5"
 url-escape = "0.1"
