@@ -99,6 +99,6 @@ mod tests {
     #[test_case("bla.bla@web.de")]
     fn invalid_mail_links(link: &str) {
         let result = check_email_str(link);
-        assert!(result != LinkCheckResult::Ok);
+        assert_ne!(result, LinkCheckResult::Ok);
     }
 }

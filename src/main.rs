@@ -40,10 +40,9 @@ async fn main() -> BoxResult<()> {
         _ => log::LevelFilter::Warn,
     };
     logger::init(log_level)?;
-    info!("Config: {}", &config);
+    info!("Config: {config}");
     if mlc::run(&config).await.is_err() {
         process::exit(1);
-    } else {
-        process::exit(0);
     }
+    process::exit(0);
 }

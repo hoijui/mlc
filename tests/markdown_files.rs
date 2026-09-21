@@ -15,7 +15,7 @@ use mlc::config::{Config, OptionalConfig};
 #[cfg(test)]
 use mle::extractors::gather_links;
 use mle::{
-    link::{FileLoc, FileSystemLoc, Position},
+    link::{FileLoc, FileSystemLoc, Link, Position},
     markup::{Content, File as MarkupFile, Type as MarkupType},
 };
 use std::sync::Arc;
@@ -45,7 +45,11 @@ async fn no_links() {
     .await
     .unwrap();
     let result = gather_links(&file, config.extractor_cfg()).await.unwrap();
-    assert!(result.links.is_empty());
+    assert_eq!(
+        result.links,
+        [] as [Link; 0],
+        "no links should be found in file that has none"
+    );
 }
 
 #[tokio::test]

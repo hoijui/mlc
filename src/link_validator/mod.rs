@@ -96,7 +96,7 @@ pub fn resolve_target_link(link: &Link, config: &Config) -> BoxResult<mle::link:
 const EMPTY_VEC: Vec<WildMatch> = vec![];
 
 pub async fn check(link_target: &Target, config: &Config) -> LinkCheckResult {
-    info!("Check link {}.", &link_target);
+    info!("Check link {link_target}.");
     match link_target {
         Target::Ftp(url) => LinkCheckResult::NotImplemented(format!(
             "Link type for '{url}' (FTP) is not supported yet and cannot be checked.",

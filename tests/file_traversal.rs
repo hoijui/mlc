@@ -37,5 +37,9 @@ async fn empty_folder() {
     let markup_files = markup::Type::find(root.as_path(), markup_types, ignore_paths)
         .await
         .unwrap();
-    assert!(markup_files.is_empty());
+    assert_eq!(
+        markup_files,
+        [] as [PathBuf; 0],
+        "no markup files should be found in an empty folder"
+    );
 }

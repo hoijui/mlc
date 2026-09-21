@@ -179,7 +179,7 @@ mod test {
             result,
             LinkCheckResult::Warning(format!(
                 "Request was redirected to {}/",
-                &redirect_server.url()
+                redirect_server.url()
             ))
         );
     }
@@ -202,7 +202,7 @@ mod test {
 
         let result = check_http_str(
             &server.url(),
-            &[WildMatch::new(&format!("{}*", &redirect_server.url()))],
+            &[WildMatch::new(&format!("{}*", redirect_server.url()))],
         )
         .await;
 
@@ -256,7 +256,7 @@ mod test {
             result,
             LinkCheckResult::Warning(format!(
                 "Request was redirected to {}/",
-                &redirect_server.url()
+                redirect_server.url()
             ))
         );
     }
@@ -305,6 +305,6 @@ mod test {
     //#[tokio::test]
     async fn check_wrong_http_request() {
         let result = check_http_str("https://doesNotExist.me/even/less/likelly", &[]).await;
-        assert!(result != LinkCheckResult::Ok);
+        assert_ne!(result, LinkCheckResult::Ok);
     }
 }
