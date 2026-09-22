@@ -15,7 +15,7 @@ SPDX-License-Identifier: MIT
   https://badgen.net/crates/d/mlc?color=blue)](
   https://crates.io/crates/mlc)
 [![build status](
-  https://github.com/hoijui/mlc/actions/workflows/rust.yml/badge.svg)](
+  https://github.com/hoijui/mlc/actions/workflows/build.yml/badge.svg)](
   https://github.com/hoijui/mlc/actions/workflows/build.yml)
 [![license](
   https://img.shields.io/badge/License-MIT-yellow.svg)](
