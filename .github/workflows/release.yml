@@ -127,7 +127,7 @@ jobs:
         submodules: true
 
     - name: "Mark the build scripts as Git-ignored, locally"
-        run: run/rp/setup --skip-update
+      run: run/rp/setup --skip-update
 
     - name: "Install STOML (BASH TOML parser)"
       run: |
