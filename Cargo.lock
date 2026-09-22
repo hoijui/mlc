@@ -1521,6 +1521,8 @@ dependencies = [
 [[package]]
 name = "mle"
 version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a961e29f583d71e4040529e41fe7cdc0babebba5aa3832e84dc10fcb5adc549"
 dependencies = [
  "async-std",
  "async-trait",
