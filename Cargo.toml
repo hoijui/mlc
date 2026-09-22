@@ -67,8 +67,7 @@ fern = "0.7"
 futures = "0.3"
 git-version = "0.3"
 log = "0.4"
-mle = { path = "../mle" }
-# mle = "0.28"
+mle = { version = "0.29", path = "../mle" }
 pulldown-cmark = "0.13"
 regex = "1.13"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "brotli", "gzip", "deflate"] }
